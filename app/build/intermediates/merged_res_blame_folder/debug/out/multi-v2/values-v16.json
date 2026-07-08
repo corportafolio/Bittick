@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.bittick.app-mergeDebugResources-52:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "/home/candela/.gradle/caches/transforms-3/93f3cc555295d5998afff5917faf3601/transformed/core-1.12.0/res/values-v16/values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "65",
+                        "endOffsets": "116"
+                    }
+                }
+            ]
+        }
+    ]
+}

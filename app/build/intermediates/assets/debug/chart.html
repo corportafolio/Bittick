@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="lightweight-charts.standalone.production.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: #130500; overflow: hidden; }
+#chart { width: 100%; height: 100%; }
+#loading {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #00BCD4;
+    font-family: sans-serif;
+    font-size: 14px;
+    text-align: center;
+}
+#error {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #FF5252;
+    font-family: sans-serif;
+    font-size: 14px;
+    text-align: center;
+    display: none;
+    padding: 16px;
+    background: rgba(0,0,0,0.8);
+    border-radius: 8px;
+}
+</style>
+</head>
+<body>
+<div id="chart"></div>
+<div id="loading">Cargando grafico...</div>
+<div id="error"></div>
+<script>
+var chart = null;
+var candleSeries = null;
+var zoneMarkers = [];
+var bridgeReady = false;
+
+function sendToAndroid(type, msg) {
+    if (typeof AndroidBridge !== 'undefined') {
+        try {
+            AndroidBridge.onChartEvent(type, msg);
+        } catch(e) {
+            console.error('bridge error:', e);
+        }
+    }
+}
+
+try {
+    if (typeof LightweightCharts === 'undefined') {
+        throw new Error('LightweightCharts library no cargo');
+    }
+    console.log('LightweightCharts v' + LightweightCharts.version + ' cargado OK');
+    sendToAndroid('lib_loaded', LightweightCharts.version);
+    initChart();
+} catch(e) {
+    console.error('init error:', e.message);
+    sendToAndroid('error', e.message);
+    document.getElementById('loading').style.display = 'none';
+    var ed = document.getElementById('error');
+    ed.textContent = 'Error: ' + e.message;
+    ed.style.display = 'block';
+}
+
+function initChart() {
+    var el = document.getElementById('chart');
+    if (!el) throw new Error('No se encontro #chart');
+
+    chart = LightweightCharts.createChart(el, {
+        layout: {
+            background: { type: 'solid', color: '#130500' },
+            textColor: '#00BCD4',
+            fontSize: 10
+        },
+        grid: {
+            vertLines: { color: '#1A0800' },
+            horzLines: { color: '#1A0800' }
+        },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: '#2A0A00' },
+        timeScale: { borderColor: '#2A0A00', timeVisible: true },
+        handleScroll: false,
+        handleScale: false
+    });
+    candleSeries = chart.addCandlestickSeries({
+        upColor: '#1B5E20',
+        downColor: '#B71C1C',
+        borderUpColor: '#1B5E20',
+        borderDownColor: '#B71C1C',
+        wickUpColor: '#1B5E20',
+        wickDownColor: '#B71C1C'
+    });
+    chart.timeScale().fitContent();
+    
+    // Resize inmediato si el contenedor ya tiene dimensiones
+    if (el.clientWidth > 0 && el.clientHeight > 0) {
+        chart.resize(el.clientWidth, el.clientHeight);
+    }
+    
+    new ResizeObserver(entries => {
+        for (let entry of entries) {
+            chart.resize(entry.contentRect.width, entry.contentRect.height);
+        }
+    }).observe(el);
+    
+    console.log('Chart initialized OK');
+    bridgeReady = true;
+    sendToAndroid('chart_ready', 'OK');
+}
+
+function setData(data) {
+    console.log('setData recibido, velas=' + (data ? data.length : 0));
+    sendToAndroid('setData_called', '' + (data ? data.length : 0));
+    if (!candleSeries) {
+        console.warn('candleSeries null');
+        sendToAndroid('setData_error', 'candleSeries null');
+        return;
+    }
+    if (!data || data.length === 0) {
+        document.getElementById('loading').textContent = 'Sin datos';
+        sendToAndroid('setData_error', 'data vacio');
+        return;
+    }
+    var loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.remove();
+    try {
+        candleSeries.setData(data);
+        chart.timeScale().fitContent();
+        console.log('setData OK, ' + data.length + ' velas');
+        sendToAndroid('setData_ok', '' + data.length);
+    } catch(e) {
+        console.error('setData error:', e.message);
+        sendToAndroid('setData_error', e.message);
+    }
+}
+
+function setZones(zones, data) {
+    console.log('setZones recibido, zonas=' + (zones ? zones.length : 0));
+    sendToAndroid('setZones_called', '' + (zones ? zones.length : 0));
+    if (!chart || !zones || !data) {
+        console.warn('setZones: args faltantes');
+        return;
+    }
+    try {
+        clearZones();
+        for (var i = 0; i < zones.length; i++) {
+            var z = zones[i];
+            drawZone(z.startPrice, z.endPrice, z.zoneType, z.label, z.strength, data);
+        }
+        console.log('setZones OK, ' + zones.length + ' zonas');
+        sendToAndroid('setZones_ok', '' + zones.length);
+    } catch(e) {
+        console.error('setZones error:', e.message);
+        sendToAndroid('setZones_error', e.message);
+    }
+}
+
+function drawZone(startPrice, endPrice, zoneType, label, strength, data) {
+    if (!chart || !data || data.length === 0) return;
+    var firstTime = data[0].time;
+    var lastTime = data[data.length - 1].time;
+
+    var ZONE_COLORS = {
+        buy:     { main: '#44FF66', fill: '#44FF6633' },
+        sell:    { main: '#FF4444', fill: '#FF444433' },
+        compra:  { main: '#44FF66', fill: '#44FF6633' },
+        venta:   { main: '#FF4444', fill: '#FF444433' },
+        demanda: { main: '#FFD700', fill: '#FFD70033' },
+        oferta:  { main: '#FF8800', fill: '#FF880022' },
+        deuda:   { main: '#FF8800', fill: '#FF880022' },
+    };
+    var c = ZONE_COLORS[zoneType] || ZONE_COLORS.buy;
+
+    var top = Math.max(startPrice, endPrice);
+    var bottom = Math.min(startPrice, endPrice);
+    var mid = (top + bottom) / 2;
+
+    // Fill area (semi-transparent rectangle)
+    var fillSeries = chart.addBaselineSeries({
+        baseValue: { type: 'price', price: bottom },
+        topLineColor: 'transparent',
+        topFillColor1: c.fill,
+        topFillColor2: c.fill,
+        bottomFillColor1: 'transparent',
+        bottomFillColor2: 'transparent',
+        lineWidth: 0,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+    });
+    fillSeries.setData([
+        { time: firstTime, value: top },
+        { time: lastTime, value: top }
+    ]);
+    zoneMarkers.push(fillSeries);
+
+    // Top border
+    var topLine = chart.addLineSeries({
+        color: c.main,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+    });
+    topLine.setData([
+        { time: firstTime, value: top },
+        { time: lastTime, value: top }
+    ]);
+    zoneMarkers.push(topLine);
+
+    // Bottom border
+    var bottomLine = chart.addLineSeries({
+        color: c.main,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+    });
+    bottomLine.setData([
+        { time: firstTime, value: bottom },
+        { time: lastTime, value: bottom }
+    ]);
+    zoneMarkers.push(bottomLine);
+
+    // Mid marker (label)
+    var markerSeries = chart.addLineSeries({
+        color: c.main,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dotted,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+    });
+    markerSeries.setData([
+        { time: firstTime, value: mid },
+        { time: lastTime, value: mid }
+    ]);
+    zoneMarkers.push(markerSeries);
+}
+
+function clearZones() {
+    for (var i = 0; i < zoneMarkers.length; i++) {
+        try { chart.removeSeries(zoneMarkers[i]); } catch(e) {}
+    }
+    zoneMarkers = [];
+}
+</script>
+</body>
+</html>
