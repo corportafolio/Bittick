@@ -1,6 +1,5 @@
 package com.bittick.network
 
-// API Response wrappers
 data class ApiResponse<T>(val exito: Boolean, val data: T?, val message: String?, val error: String?)
 
 data class TradingOpportunitiesResponse(val exito: Boolean, val data: List<TradingOpportunity>)
@@ -12,7 +11,6 @@ data class CancelPositionResponse(val exito: Boolean, val message: String?, val 
 data class KlinesResponse(val exito: Boolean, val data: List<Kline>)
 data class TickerResponse(val exito: Boolean, val data: Ticker?)
 
-// Trading
 data class TradingOpportunity(
     val id: Int,
     val asset: String,
@@ -69,7 +67,6 @@ data class Balance(
     val available: Double
 )
 
-// Chart
 data class Kline(
     val openTime: Long,
     val open: Double,
@@ -91,7 +88,6 @@ data class Ticker(
     val quoteVolume: Double?
 )
 
-// Chart Zones (Avizor strategy)
 data class ZonesResponse(val exito: Boolean, val data: ZonesData?)
 data class ZonesData(val zones: List<ChartZone>, val atr: Double)
 data class ChartZone(
@@ -103,3 +99,93 @@ data class ChartZone(
     val type: String,
     val label: String
 )
+
+// Wallet & Auth
+data class NonceResponse(val exito: Boolean, val data: NonceData?)
+data class NonceData(val nonce: String, val message: String)
+
+data class VerifyWalletRequest(val address: String, val signature: String, val nonce: String)
+
+data class VerifyWalletResponse(
+    val exito: Boolean,
+    val data: VerifyWalletData?,
+    val error: String?
+)
+
+data class VerifyWalletData(
+    val verified: Boolean,
+    val inscriptions: List<InscriptionInfo>?,
+    val count: Int?,
+    val selectedInscriptionId: String?,
+    val selectedBotNum: Int?,
+    val tier: String?,
+    val botImageUrl: String?,
+    val message: String?
+)
+
+data class InscriptionInfo(
+    val num: Int,
+    val inscriptionId: String,
+    val tier: String,
+    val botImageUrl: String?,
+    val isSelected: Boolean? = null,
+    val selected: Boolean? = null
+)
+
+data class SelectInscriptionRequest(val inscriptionId: String)
+
+data class SelectInscriptionResponse(
+    val exito: Boolean,
+    val data: SelectInscriptionData?,
+    val error: String?
+)
+
+data class SelectInscriptionData(
+    val selectedInscriptionId: String,
+    val selectedBotNum: Int,
+    val tier: String,
+    val botImageUrl: String
+)
+
+data class WalletInscriptionsResponse(
+    val exito: Boolean,
+    val data: WalletInscriptionsData?
+)
+
+data class WalletInscriptionsData(
+    val inscriptions: List<InscriptionInfo>,
+    val selectedInscriptionId: String?,
+    val selectedBotNum: Int?,
+    val tier: String?
+)
+
+// Preferences
+data class InscriptionPreferences(
+    val inscription_id: String,
+    val address: String,
+    val spot_enabled: Boolean = true,
+    val futures_enabled: Boolean = true,
+    val spot_position_size: Double = 10.0,
+    val futures_position_size: Double = 10.0,
+    val spot_max_positions: Int = 5,
+    val futures_max_positions: Int = 5,
+    val spot_min_score: Int = 6,
+    val futures_min_score: Int = 7
+)
+
+data class BotPreferencesResponse(val exito: Boolean, val data: InscriptionPreferences?)
+
+data class SavePreferencesRequest(
+    val inscriptionId: String,
+    val address: String,
+    val spot_enabled: Boolean,
+    val futures_enabled: Boolean,
+    val spot_position_size: Double,
+    val futures_position_size: Double,
+    val spot_max_positions: Int,
+    val futures_max_positions: Int,
+    val spot_min_score: Int,
+    val futures_min_score: Int
+)
+
+data class SavePreferencesResponse(val exito: Boolean, val message: String?)
