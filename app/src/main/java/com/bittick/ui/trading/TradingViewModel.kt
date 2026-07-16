@@ -37,7 +37,9 @@ data class TradingUiState(
     val isLoading: Boolean = false,
     val chartLoading: Boolean = false,
     val error: String? = null,
-    val chartStatus: String = "iniciando..."
+    val chartStatus: String = "iniciando...",
+    val isPremium: Boolean = false,
+    val isFreeTier: Boolean = false
 )
 
 data class TradingOpportunityItem(
@@ -101,8 +103,9 @@ class TradingViewModel @Inject constructor(
 
     private suspend fun fetchNewOpportunities() {
         try {
+            val addr = getWalletAddress()
             val since = if (_state.value.opportunities.isEmpty()) null else lastCreatedAt
-            val response = api.getTradingOpportunities(limit = 50, offset = 0, since = since)
+            val response = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = since)
             if (response.isSuccessful && response.body()?.exito == true) {
                 val allItems = response.body()!!.data.map { it.toItem() }
                 val newItems = allItems.filter { it.score >= 5 && it.confidence >= 5 }
@@ -114,7 +117,9 @@ class TradingViewModel @Inject constructor(
                             opportunities = (trulyNew + _state.value.opportunities).sortedByDescending { it.id }
                         )
                         updateLastCreatedAt(trulyNew)
-                        announceOpportunities(trulyNew)
+                        if (!_state.value.isFreeTier) {
+                            announceOpportunities(trulyNew)
+                        }
                     }
                 }
             }
@@ -128,32 +133,37 @@ class TradingViewModel @Inject constructor(
         }
     }
 
+    private fun getWalletAddress(): String? = prefs.getWalletAddress()
+
     fun loadAll() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val oppResponse = api.getTradingOpportunities()
-                val posResponse = api.getTradingPositions()
-                val botStatusResponse = api.getTradingBotStatus()
+                val addr = getWalletAddress()
+                val oppResponse = api.getTradingOpportunities(walletAddress = addr)
+                val posResponse = api.getTradingPositions(walletAddress = addr)
+                val botStatusResponse = api.getTradingBotStatus(walletAddress = addr)
 
-                val opportunities = if (oppResponse.isSuccessful && oppResponse.body()?.exito == true) {
-                    oppResponse.body()!!.data.map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
+                val isFreeTier = oppResponse.code() == 300
+
+                val opportunities = if (oppResponse.isSuccessful || isFreeTier) {
+                    (oppResponse.body()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
                 } else emptyList()
 
-                val spotPos = if (posResponse.isSuccessful && posResponse.body()?.exito == true) {
-                    posResponse.body()!!.data.filter { it.bot_type == "spot" }
+                val spotPos = if (posResponse.isSuccessful || posResponse.code() == 300) {
+                    (posResponse.body()?.data ?: emptyList()).filter { it.bot_type == "spot" }
                 } else emptyList()
 
-                val futuresPos = if (posResponse.isSuccessful && posResponse.body()?.exito == true) {
-                    posResponse.body()!!.data.filter { it.bot_type == "futures" }
+                val futuresPos = if (posResponse.isSuccessful || posResponse.code() == 300) {
+                    (posResponse.body()?.data ?: emptyList()).filter { it.bot_type == "futures" }
                 } else emptyList()
 
-                val spotStatus = if (botStatusResponse.isSuccessful && botStatusResponse.body()?.exito == true) {
-                    botStatusResponse.body()!!.data?.spot
+                val spotStatus = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
+                    botStatusResponse.body()?.data?.spot
                 } else null
 
-                val futuresStatus = if (botStatusResponse.isSuccessful && botStatusResponse.body()?.exito == true) {
-                    botStatusResponse.body()!!.data?.futures
+                val futuresStatus = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
+                    botStatusResponse.body()?.data?.futures
                 } else null
 
                 _state.value = _state.value.copy(
@@ -162,12 +172,16 @@ class TradingViewModel @Inject constructor(
                     futuresPositions = futuresPos,
                     spotBotStatus = spotStatus,
                     futuresBotStatus = futuresStatus,
-                    isLoading = false
+                    isLoading = false,
+                    isFreeTier = isFreeTier,
+                    isPremium = !isFreeTier && addr != null
                 )
                 updateLastCreatedAt(opportunities)
-                announceOpportunities(opportunities)
+                if (!isFreeTier) {
+                    announceOpportunities(opportunities)
+                }
             } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Error de conexión")
+                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Error de conexion")
             }
         }
     }

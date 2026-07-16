@@ -12,6 +12,7 @@ interface ApiService {
 
     @GET("api/trading/opportunities")
     suspend fun getTradingOpportunities(
+        @Header("x-wallet-address") walletAddress: String? = null,
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0,
         @Query("since") since: String? = null
@@ -22,6 +23,7 @@ interface ApiService {
 
     @GET("api/trading/positions")
     suspend fun getTradingPositions(
+        @Header("x-wallet-address") walletAddress: String? = null,
         @Query("type") type: String? = null,
         @Query("status") status: String? = "open"
     ): Response<PositionsResponse>
@@ -30,7 +32,9 @@ interface ApiService {
     suspend fun cancelTradingPosition(@Path("id") id: Int): Response<CancelPositionResponse>
 
     @GET("api/trading/bot/status")
-    suspend fun getTradingBotStatus(): Response<BotStatusResponse>
+    suspend fun getTradingBotStatus(
+        @Header("x-wallet-address") walletAddress: String? = null
+    ): Response<BotStatusResponse>
 
     @GET("api/chart/klines")
     suspend fun getKlines(

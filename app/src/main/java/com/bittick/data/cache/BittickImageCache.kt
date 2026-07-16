@@ -6,11 +6,14 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +22,16 @@ class BittickImageCache @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val cache = ConcurrentHashMap<String, String>()
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
+    private val serverClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .build()
+
+    private val serverBaseUrl = "http://192.168.101.74:4001"
 
     suspend fun getImage(inscriptionId: String): Result<String> = withContext(Dispatchers.IO) {
         try {
@@ -43,13 +55,48 @@ class BittickImageCache @Inject constructor(
                 return@withContext Result.failure(Exception("Error descargando imagen: ${response.code}"))
             }
 
-            val bytes = response.body?.bytes() ?: return@withContext Result.failure(Exception("Respuesta vacía"))
+            val bytes = response.body?.bytes() ?: return@withContext Result.failure(Exception("Respuesta vacia"))
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 ?: return@withContext Result.failure(Exception("Error decodificando imagen"))
 
             val base64 = bitmapToBase64(bitmap)
             cache[inscriptionId] = base64
             prefs.edit().putString(inscriptionId, base64).apply()
+
+            Result.success(base64)
+        } catch (e: Exception) {
+            Result.failure(Exception("Error de red: ${e.message}"))
+        }
+    }
+
+    suspend fun getBotImage(botNum: Int): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val key = "bot_$botNum"
+            val cached = cache[key]
+            if (cached != null) return@withContext Result.success(cached)
+
+            val prefs = context.getSharedPreferences("bittick_image_cache", Context.MODE_PRIVATE)
+            val saved = prefs.getString(key, null)
+            if (saved != null) {
+                cache[key] = saved
+                return@withContext Result.success(saved)
+            }
+
+            val paddedNum = botNum.toString().padStart(2, '0')
+            val url = "$serverBaseUrl/api/auth/bot-image/$paddedNum"
+            val request = Request.Builder().url(url).build()
+            val response = serverClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("Error: ${response.code}"))
+            }
+
+            val bytes = response.body?.bytes() ?: return@withContext Result.failure(Exception("Vacio"))
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                ?: return@withContext Result.failure(Exception("Error decodificando"))
+
+            val base64 = bitmapToBase64(bitmap)
+            cache[key] = base64
+            prefs.edit().putString(key, base64).apply()
 
             Result.success(base64)
         } catch (e: Exception) {

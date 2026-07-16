@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bittick.data.preferences.BittickPreferences
 import com.bittick.network.BotPosition
 import com.bittick.network.BotStatusItem
 import com.bittick.ui.chart.CandleChartView
@@ -72,6 +73,8 @@ private val INTERVALS = listOf("1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w",
 @Composable
 fun TradingScreen(
     onSettingsClick: () -> Unit = {},
+    onWalletClick: () -> Unit = {},
+    walletAddress: String? = null,
     viewModel: TradingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -114,6 +117,31 @@ fun TradingScreen(
                         unselectedContainerColor = Color.Transparent
                     )
                 )
+                NavigationDrawerItem(
+                    icon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                            contentDescription = null,
+                            tint = Secondary
+                        )
+                    },
+                    label = {
+                        Text(
+                            if (walletAddress != null) "Wallet: ${walletAddress.take(6)}...${walletAddress.takeLast(4)}"
+                            else "Conectar Wallet",
+                            color = OnPrimary
+                        )
+                    },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onWalletClick()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Primary,
+                        unselectedContainerColor = Color.Transparent
+                    )
+                )
             }
         }
     ) {
@@ -141,45 +169,80 @@ fun TradingScreen(
                         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        if (state.isFreeTier) {
+                            item {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A237E)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = "Conecta una wallet de Bitcoin con una inscripcion de la coleccion Bittick Agents para acceder al contenido premium.",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
+                            }
+                        }
                         item {
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Surface),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        INTERVALS.forEach { interval ->
-                                            FilterChip(
-                                                selected = state.chartInterval == interval,
-                                                onClick = { viewModel.loadKlines(interval) },
-                                                label = { Text(interval, style = MaterialTheme.typography.labelSmall) },
-                                                colors = FilterChipDefaults.filterChipColors(
-                                                    selectedContainerColor = BittickColor,
-                                                    selectedLabelColor = OnSecondary
+                                    if (!state.isFreeTier) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            INTERVALS.forEach { interval ->
+                                                FilterChip(
+                                                    selected = state.chartInterval == interval,
+                                                    onClick = { viewModel.loadKlines(interval) },
+                                                    label = { Text(interval, style = MaterialTheme.typography.labelSmall) },
+                                                    colors = FilterChipDefaults.filterChipColors(
+                                                        selectedContainerColor = BittickColor,
+                                                        selectedLabelColor = OnSecondary
+                                                    )
                                                 )
-                                            )
+                                            }
                                         }
                                     }
-                                    Box {
-                                        CandleChartView(klines = state.klines, zones = state.zones)
-                                        if (state.chartLoading) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(if (state.isFreeTier) 120.dp else 300.dp)
+                                    ) {
+                                        if (!state.isFreeTier) {
+                                            CandleChartView(klines = state.klines, zones = state.zones)
+                                            if (state.chartLoading) {
+                                                Box(
+                                                    modifier = Modifier.matchParentSize(),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(color = BittickColor)
+                                                }
+                                            }
+                                        } else {
                                             Box(
-                                                modifier = Modifier.matchParentSize(),
+                                                modifier = Modifier.fillMaxSize(),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                CircularProgressIndicator(color = BittickColor)
+                                                Text(
+                                                    text = "Contenido premium",
+                                                    color = Secondary.copy(alpha = 0.3f),
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
                                             }
                                         }
                                     }
                                     Text(
-                                        state.chartStatus,
+                                        if (state.isFreeTier) "Conecta una wallet con Bittick Agent para ver el grafico"
+                                        else state.chartStatus,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = if (state.chartStatus.contains("error")) Color(0xFFFF5252)
-                                            else if (state.chartStatus.contains("OK")) Color(0xFF4CAF50)
-                                            else Secondary.copy(alpha = 0.6f)
+                                        else if (state.chartStatus.contains("OK")) Color(0xFF4CAF50)
+                                        else Secondary.copy(alpha = 0.6f)
                                     )
                                     state.currentPrice?.let { price ->
                                         Text(
@@ -193,8 +256,10 @@ fun TradingScreen(
                             }
                         }
 
-                        item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel) }
-                        item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel) }
+                        if (!state.isFreeTier) {
+                            item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel) }
+                            item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel) }
+                        }
 
                         state.error?.let { err ->
                             item {

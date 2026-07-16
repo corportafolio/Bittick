@@ -8,6 +8,7 @@ import com.bittick.data.cache.BittickImageCache
 import com.bittick.data.preferences.BittickPreferences
 import com.bittick.network.ApiClient
 import com.bittick.network.InscriptionInfo
+import com.bittick.network.VerifyWalletRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,19 +42,28 @@ class WalletViewModel @Inject constructor(
 
     private val deepLinkHandler = WalletDeepLinkHandler(context)
 
+    private var pendingNonce: String? = null
+    private var pendingMessage: String? = null
+    private var connectStep: ConnectStep = ConnectStep.IDLE
+
+    private enum class ConnectStep { IDLE, SIGNING, GETTING_ADDRESS, VERIFYING }
+
     fun onDeepLinkResponse(uri: Uri) {
-        if (_state.value.isConnecting) {
-            deepLinkHandler.handleResponse(uri)
+        when (connectStep) {
+            ConnectStep.SIGNING, ConnectStep.GETTING_ADDRESS -> {
+                deepLinkHandler.handleResponse(uri)
+            }
+            else -> {}
         }
     }
 
     fun connectWallet() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isConnecting = true, error = null)
+            connectStep = ConnectStep.IDLE
 
             try {
-                val tempAddress = "pending"
-                val nonceResponse = ApiClient.apiService.getNonce(tempAddress)
+                val nonceResponse = ApiClient.apiService.getNonce("pending")
                 if (!nonceResponse.isSuccessful || nonceResponse.body()?.exito != true) {
                     _state.value = _state.value.copy(
                         isConnecting = false,
@@ -63,65 +73,19 @@ class WalletViewModel @Inject constructor(
                 }
 
                 val nonceData = nonceResponse.body()!!.data!!
-                val message = nonceData.message
-                val nonce = nonceData.nonce
+                pendingNonce = nonceData.nonce
+                pendingMessage = nonceData.message
 
-                deepLinkHandler.requestSignature(message) { result ->
+                connectStep = ConnectStep.SIGNING
+                deepLinkHandler.requestSignature(nonceData.nonce) { result ->
                     result.onSuccess { signature ->
-                        viewModelScope.launch {
-                            try {
-                                val verifyBody = com.bittick.network.VerifyWalletRequest(
-                                    address = tempAddress,
-                                    signature = signature,
-                                    nonce = nonce
-                                )
-                                val verifyResponse = ApiClient.apiService.verifyWallet(verifyBody)
-                                if (!verifyResponse.isSuccessful || verifyResponse.body()?.exito != true) {
-                                    _state.value = _state.value.copy(
-                                        isConnecting = false,
-                                        error = verifyResponse.body()?.error ?: "Error verificando wallet"
-                                    )
-                                    return@launch
-                                }
-
-                                val data = verifyResponse.body()!!.data!!
-                                if (!data.verified) {
-                                    _state.value = _state.value.copy(
-                                        isConnecting = false,
-                                        error = data.message ?: "Wallet no tiene Bittick Agent"
-                                    )
-                                    return@launch
-                                }
-
-                                val address = data.selectedInscriptionId?.let {
-                                    preferences.getWalletAddress() ?: ""
-                                } ?: ""
-
-                                preferences.setWalletAddress(address)
-                                preferences.setSelectedInscriptionId(data.selectedInscriptionId)
-                                preferences.setIsPremium(data.tier == "FOUNDER")
-                                preferences.setBotNumber(data.selectedBotNum)
-
-                                _state.value = _state.value.copy(
-                                    isConnecting = false,
-                                    verified = true,
-                                    connectedAddress = address,
-                                    inscriptions = data.inscriptions ?: emptyList(),
-                                    selectedInscription = data.inscriptions?.firstOrNull { it.selected == true },
-                                    isPremium = data.tier == "FOUNDER",
-                                    tier = data.tier,
-                                    botNumber = data.selectedBotNum
-                                )
-                            } catch (e: Exception) {
-                                _state.value = _state.value.copy(
-                                    isConnecting = false,
-                                    error = "Error de conexión: ${e.message}"
-                                )
-                            }
-                        }
+                        pendingNonce = null
+                        pendingMessage = null
+                        getAddressesAndVerify(signature)
                     }
                     result.onFailure { e ->
                         viewModelScope.launch {
+                            connectStep = ConnectStep.IDLE
                             _state.value = _state.value.copy(
                                 isConnecting = false,
                                 error = e.message
@@ -130,11 +94,108 @@ class WalletViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                connectStep = ConnectStep.IDLE
                 _state.value = _state.value.copy(
                     isConnecting = false,
-                    error = "Error de conexión: ${e.message}"
+                    error = "Error de conexion: ${e.message}"
                 )
             }
+        }
+    }
+
+    private fun getAddressesAndVerify(signature: String) {
+        viewModelScope.launch {
+            try {
+                val addressNonceResponse = ApiClient.apiService.getNonce("getaddr")
+                if (!addressNonceResponse.isSuccessful || addressNonceResponse.body()?.exito != true) {
+                    _state.value = _state.value.copy(
+                        isConnecting = false,
+                        error = "Error obteniendo nonce para direccion"
+                    )
+                    connectStep = ConnectStep.IDLE
+                    return@launch
+                }
+
+                val addrNonce = addressNonceResponse.body()!!.data!!.nonce
+                connectStep = ConnectStep.GETTING_ADDRESS
+                deepLinkHandler.requestAddresses(addrNonce) { result ->
+                    result.onSuccess { address ->
+                        connectStep = ConnectStep.VERIFYING
+                        viewModelScope.launch {
+                            verifyOnServer(address, signature)
+                        }
+                    }
+                    result.onFailure { e ->
+                        viewModelScope.launch {
+                            connectStep = ConnectStep.IDLE
+                            _state.value = _state.value.copy(
+                                isConnecting = false,
+                                error = "Error obteniendo direccion: ${e.message}"
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                connectStep = ConnectStep.IDLE
+                _state.value = _state.value.copy(
+                    isConnecting = false,
+                    error = "Error de conexion: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private suspend fun verifyOnServer(address: String, signature: String) {
+        try {
+            val verifyBody = VerifyWalletRequest(
+                address = address,
+                signature = signature,
+                nonce = pendingNonce ?: ""
+            )
+            val verifyResponse = ApiClient.apiService.verifyWallet(verifyBody)
+            if (!verifyResponse.isSuccessful || verifyResponse.body()?.exito != true) {
+                connectStep = ConnectStep.IDLE
+                _state.value = _state.value.copy(
+                    isConnecting = false,
+                    error = verifyResponse.body()?.error ?: "Error verificando wallet"
+                )
+                return
+            }
+
+            val data = verifyResponse.body()!!.data!!
+            if (!data.verified) {
+                connectStep = ConnectStep.IDLE
+                _state.value = _state.value.copy(
+                    isConnecting = false,
+                    error = data.message ?: "Wallet no tiene Bittick Agent"
+                )
+                return
+            }
+
+            preferences.setWalletAddress(address)
+            preferences.setSelectedInscriptionId(data.selectedInscriptionId)
+            preferences.setIsPremium(data.tier == "FOUNDER")
+            preferences.setBotNumber(data.selectedBotNum)
+
+            connectStep = ConnectStep.IDLE
+            _state.value = _state.value.copy(
+                isConnecting = false,
+                verified = true,
+                connectedAddress = address,
+                inscriptions = data.inscriptions ?: emptyList(),
+                selectedInscription = data.inscriptions?.firstOrNull { it.selected == true },
+                isPremium = data.tier == "FOUNDER",
+                tier = data.tier,
+                botNumber = data.selectedBotNum
+            )
+
+            data.selectedInscriptionId?.let { loadBotImage(it) }
+        } catch (e: Exception) {
+            connectStep = ConnectStep.IDLE
+            _state.value = _state.value.copy(
+                isConnecting = false,
+                error = "Error de conexion: ${e.message}"
+            )
         }
     }
 
@@ -161,7 +222,7 @@ class WalletViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
-                    error = "Error seleccionando inscripción: ${e.message}"
+                    error = "Error seleccionando inscripcion: ${e.message}"
                 )
             }
         }

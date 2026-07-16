@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.bittick.data.preferences.BittickPreferences
 import com.bittick.ui.settings.SettingsScreen
 import com.bittick.ui.trading.TradingScreen
 import com.bittick.ui.theme.BittickTheme
@@ -21,10 +22,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var walletViewModel: WalletViewModel? = null
+    @Inject lateinit var preferences: BittickPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,11 +40,14 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val walletViewModel: WalletViewModel = hiltViewModel()
                     this.walletViewModel = walletViewModel
+                    val walletState by walletViewModel.state.collectAsState()
 
                     NavHost(navController = navController, startDestination = "trading") {
                         composable("trading") {
                             TradingScreen(
-                                onSettingsClick = { navController.navigate("settings") }
+                                onSettingsClick = { navController.navigate("settings") },
+                                onWalletClick = { navController.navigate("wallet") },
+                                walletAddress = walletState.connectedAddress ?: preferences.getWalletAddress()
                             )
                         }
                         composable("settings") {
@@ -51,7 +57,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("wallet") {
-                            val walletState by walletViewModel.state.collectAsState()
                             WalletScreen(
                                 walletState = walletState,
                                 onConnectWallet = { walletViewModel.connectWallet() },
@@ -61,7 +66,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("inscription_picker") {
-                            val walletState by walletViewModel.state.collectAsState()
                             InscriptionPickerScreen(
                                 inscriptions = walletState.inscriptions,
                                 selectedInscription = walletState.selectedInscription,
