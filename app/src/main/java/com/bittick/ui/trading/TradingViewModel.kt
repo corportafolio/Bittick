@@ -12,8 +12,12 @@ import com.bittick.network.BotStatusItem
 import com.bittick.network.ChartZone
 import com.bittick.network.Kline
 import com.bittick.network.TradingOpportunity
+import com.bittick.network.TradingOpportunitiesResponse
+import com.bittick.network.PositionsResponse
+import com.bittick.network.BotStatusResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import retrofit2.Response
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -72,6 +76,13 @@ class TradingViewModel @Inject constructor(
     private val announcedOpportunityIds = mutableSetOf<Int>()
     private var pollingJob: Job? = null
     private var lastCreatedAt: String? = null
+    private val gson = Gson()
+
+    private inline fun <reified T> Response<T>.parsedBody(): T? {
+        if (isSuccessful) return body()
+        val raw = errorBody()?.string() ?: return null
+        return try { gson.fromJson(raw, T::class.java) } catch (_: Exception) { null }
+    }
 
     init {
         loadAll()
@@ -106,8 +117,8 @@ class TradingViewModel @Inject constructor(
             val addr = getWalletAddress()
             val since = if (_state.value.opportunities.isEmpty()) null else lastCreatedAt
             val response = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = since)
-            if (response.isSuccessful && response.body()?.exito == true) {
-                val allItems = response.body()!!.data.map { it.toItem() }
+            if (response.isSuccessful || response.code() == 300) {
+                val allItems = response.parsedBody<TradingOpportunitiesResponse>()?.data?.map { it.toItem() } ?: emptyList()
                 val newItems = allItems.filter { it.score >= 5 && it.confidence >= 5 }
                 if (newItems.isNotEmpty()) {
                     val existingIds = _state.value.opportunities.map { it.id }.toSet()
@@ -147,23 +158,23 @@ class TradingViewModel @Inject constructor(
                 val isFreeTier = oppResponse.code() == 300
 
                 val opportunities = if (oppResponse.isSuccessful || isFreeTier) {
-                    (oppResponse.body()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
+                    (oppResponse.parsedBody<TradingOpportunitiesResponse>()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
                 } else emptyList()
 
                 val spotPos = if (posResponse.isSuccessful || posResponse.code() == 300) {
-                    (posResponse.body()?.data ?: emptyList()).filter { it.bot_type == "spot" }
+                    (posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()).filter { it.bot_type == "spot" }
                 } else emptyList()
 
                 val futuresPos = if (posResponse.isSuccessful || posResponse.code() == 300) {
-                    (posResponse.body()?.data ?: emptyList()).filter { it.bot_type == "futures" }
+                    (posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()).filter { it.bot_type == "futures" }
                 } else emptyList()
 
                 val spotStatus = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
-                    botStatusResponse.body()?.data?.spot
+                    botStatusResponse.parsedBody<BotStatusResponse>()?.data?.spot
                 } else null
 
                 val futuresStatus = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
-                    botStatusResponse.body()?.data?.futures
+                    botStatusResponse.parsedBody<BotStatusResponse>()?.data?.futures
                 } else null
 
                 _state.value = _state.value.copy(
