@@ -1,5 +1,7 @@
 package com.bittick.ui.trading
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -51,9 +54,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bittick.data.preferences.BittickPreferences
 import com.bittick.network.BotPosition
@@ -75,6 +82,7 @@ fun TradingScreen(
     onSettingsClick: () -> Unit = {},
     onWalletClick: () -> Unit = {},
     walletAddress: String? = null,
+    botImageUrl: String? = null,
     viewModel: TradingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -149,6 +157,25 @@ fun TradingScreen(
             topBar = {
                 TopAppBar(
                     title = { Text("bittick", fontWeight = FontWeight.Bold, color = BittickColor) },
+                    navigationIcon = {
+                        botImageUrl?.let { base64 ->
+                            val bitmap = base64ToBitmap(base64)
+                            if (bitmap != null) {
+                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = "Bot Image",
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
+                                            .clip(CircleShape)
+                                            .border(1.5.dp, Color(0xFFF7931A), CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            }
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Filled.Menu, contentDescription = "Abrir menú", tint = BittickColor)
@@ -198,7 +225,7 @@ fun TradingScreen(
                                             INTERVALS.forEach { interval ->
                                                 FilterChip(
                                                     selected = state.chartInterval == interval,
-                                                    onClick = { viewModel.loadKlines(interval) },
+                                                    onClick = { viewModel.changeChartInterval(interval) },
                                                     label = { Text(interval, style = MaterialTheme.typography.labelSmall) },
                                                     colors = FilterChipDefaults.filterChipColors(
                                                         selectedContainerColor = BittickColor,
@@ -246,7 +273,7 @@ fun TradingScreen(
                                     )
                                     state.currentPrice?.let { price ->
                                         Text(
-                                            "BTC/USDT $${"%.2f".format(price)}",
+                                            "BTC/USDT \$${"%.2f".format(price)}",
                                             style = MaterialTheme.typography.titleMedium,
                                             color = BittickColor,
                                             fontWeight = FontWeight.Bold
@@ -330,10 +357,10 @@ private fun BotSection(
                 Spacer(modifier = Modifier.height(4.dp))
                 val balance = status.balance
                 if (balance != null) {
-                    Text("Balance: $${"%.2f".format(balance.total)} (disponible: $${"%.2f".format(balance.available)})",
+                    Text("Balance: \$${"%.2f".format(balance.total)} (disponible: \$${"%.2f".format(balance.available)})",
                         style = MaterialTheme.typography.bodySmall, color = Secondary)
                 }
-                Text("Posiciones abiertas: ${status.openPositions}/${status.maxPositions}  PNL Total: $${"%.2f".format(status.totalPnl)}",
+                Text("Posiciones abiertas: ${status.openPositions}/${status.maxPositions}  PNL Total: \$${"%.2f".format(status.totalPnl)}",
                     style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
             }
 
@@ -373,25 +400,25 @@ private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(pos.asset, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.weight(1f))
-                Text("$${"%.2f".format(pos.pnl)} (${"%.2f".format(pos.pnl_percent)}%)",
+                Text("\$${"%.2f".format(pos.pnl)} (${"%.2f".format(pos.pnl_percent)}%)",
                     color = pnlColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
             }
 
             Spacer(modifier = Modifier.height(4.dp))
             Row {
-                Text("Entrada: $${"%.2f".format(pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
+                Text("Entrada: \$${"%.2f".format(pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Actual: $${"%.2f".format(pos.current_price ?: pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
+                Text("Actual: \$${"%.2f".format(pos.current_price ?: pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
             }
 
             if (pos.target != null || pos.stop_loss != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Row {
                     if (pos.target != null) {
-                        Text("Objetivo: $${"%.2f".format(pos.target)}", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.6f))
+                        Text("Objetivo: \$${"%.2f".format(pos.target)}", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.6f))
                     }
                     if (pos.stop_loss != null) {
-                        Text("  Stop: $${"%.2f".format(pos.stop_loss)}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFB71C1C).copy(alpha = 0.6f))
+                        Text("  Stop: \$${"%.2f".format(pos.stop_loss)}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFB71C1C).copy(alpha = 0.6f))
                     }
                 }
             }
@@ -436,7 +463,7 @@ private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(op.asset, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.weight(1f))
-                Text("$${op.price}", fontWeight = FontWeight.Bold, color = Secondary)
+                Text("\$${op.price}", fontWeight = FontWeight.Bold, color = Secondary)
                 Spacer(modifier = Modifier.width(4.dp))
                 IconButton(onClick = { onDelete(op.id) }, modifier = Modifier.height(24.dp).width(24.dp)) {
                     Icon(Icons.Default.Delete, contentDescription = "Eliminar oportunidad", tint = Color(0xFFE53935), modifier = Modifier.height(18.dp))
@@ -453,10 +480,10 @@ private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit)
             Row(modifier = Modifier.fillMaxWidth()) {
                 InfoChip("Entrada", op.entryZone)
                 Spacer(modifier = Modifier.width(8.dp))
-                InfoChip("Objetivo", "$${op.target}")
+                InfoChip("Objetivo", "\$${op.target}")
             }
             Spacer(modifier = Modifier.height(4.dp))
-            InfoChip("Stop Loss", "$${op.stopLoss}")
+            InfoChip("Stop Loss", "\$${op.stopLoss}")
 
             if (op.explanation.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -465,7 +492,7 @@ private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit)
             if (op.factors.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text("Factores:", fontWeight = FontWeight.Medium, style = MaterialTheme.typography.labelSmall, color = Secondary)
-                op.factors.forEach { f -> Text("• $f", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f)) }
+                op.factors.forEach { f -> Text("M-bM-^@M-\$f", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f)) }
             }
             if (op.createdAt.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -504,6 +531,15 @@ private fun formatDayOfWeekSpanish(isoDate: String): String {
         )
         days[zdt.dayOfWeek] ?: ""
     } catch (_: Exception) { "" }
+}
+
+private fun base64ToBitmap(base64: String): android.graphics.Bitmap? {
+    return try {
+        val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
+        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    } catch (e: Exception) {
+        null
+    }
 }
 
 @Composable

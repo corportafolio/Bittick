@@ -267,7 +267,8 @@ class WalletViewModel @Inject constructor(
     private suspend fun downloadAndCacheBotImage(botNum: Int): String? {
         return withContext(Dispatchers.IO) {
             try {
-                val url = "${ApiClient.BASE_URL}/api/auth/bot-image/${botNum.toString().padStart(2, '0')}"
+                val baseUrl = ApiClient.BASE_URL.trimEnd('/')
+                val url = "$baseUrl/api/auth/bot-image/${botNum.toString().padStart(2, '0')}"
                 val inputStream = java.net.URL(url).openStream()
                 val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
                 inputStream.close()
@@ -319,6 +320,24 @@ class WalletViewModel @Inject constructor(
                 _state.value = _state.value.copy(botImageUrl = base64)
             }
         } catch (_: Exception) {}
+    }
+
+    fun refreshInscriptions() {
+        val address = _state.value.connectedAddress
+        if (address != null && address.isNotBlank()) {
+            viewModelScope.launch {
+                try {
+                    val response = ApiClient.apiService.fetchInscriptions(address)
+                    if (response.isSuccessful && response.body()?.data != null) {
+                        val inscriptions = response.body()!!.data!!.inscriptions
+                        _state.value = _state.value.copy(inscriptions = inscriptions)
+                        log("INSCRIPCIONES REFRESCADAS: ${inscriptions.size}")
+                    }
+                } catch (e: Exception) {
+                    log("ERROR refrescando inscripciones: ${e.message}")
+                }
+            }
+        }
     }
 
     fun disconnectWallet() {

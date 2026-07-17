@@ -159,7 +159,8 @@ fun WalletScreen(
     onContinueConfirmation: () -> Unit = {},
     onAddressInputChange: (String) -> Unit = {},
     onConnectWithAddress: () -> Unit = {},
-    onDismissDialogs: () -> Unit = {}
+    onDismissDialogs: () -> Unit = {},
+    onRefreshInscriptions: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -193,7 +194,7 @@ fun WalletScreen(
                     error = walletState.error,
                     onConnectWallet = onConnectWallet
                 )
-            } else {
+} else {
                 ConnectedWalletSection(
                     address = walletState.connectedAddress,
                     inscriptions = walletState.inscriptions,
@@ -203,7 +204,8 @@ fun WalletScreen(
                     tier = walletState.tier,
                     botNumber = walletState.botNumber,
                     onSelectInscription = onSelectInscription,
-                    onDisconnectWallet = onDisconnectWallet
+                    onDisconnectWallet = onDisconnectWallet,
+                    onRefreshInscriptions = onRefreshInscriptions
                 )
             }
         }
@@ -331,7 +333,8 @@ private fun ConnectedWalletSection(
     tier: String?,
     botNumber: Int?,
     onSelectInscription: (InscriptionInfo) -> Unit,
-    onDisconnectWallet: () -> Unit
+    onDisconnectWallet: () -> Unit,
+    onRefreshInscriptions: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -374,18 +377,39 @@ private fun ConnectedWalletSection(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Button(
-                    onClick = onDisconnectWallet,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2A2A2A)
-                    )
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Desconectar",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+                    Button(
+                        onClick = onDisconnectWallet,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2A2A2A)
+                        )
+                    ) {
+                        Text(
+                            text = "Desconectar",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onRefreshInscriptions,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF7931A)
+                        )
+                    ) {
+                        Text(
+                            text = "Ver todos los bots de esta wallet",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -404,12 +428,25 @@ private fun ConnectedWalletSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Seleccionar inscripción",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Seleccionar inscripción",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            if (inscriptions.isNotEmpty()) {
+                Text(
+                    text = "${inscriptions.size} inscripciones",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

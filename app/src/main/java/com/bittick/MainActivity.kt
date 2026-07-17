@@ -61,7 +61,8 @@ class MainActivity : ComponentActivity() {
                             TradingScreen(
                                 onSettingsClick = { navController.navigate("settings") },
                                 onWalletClick = { navController.navigate("wallet") },
-                                walletAddress = walletState.connectedAddress ?: preferences.getWalletAddress()
+                                walletAddress = walletState.connectedAddress ?: preferences.getWalletAddress(),
+                                botImageUrl = walletState.botImageUrl
                             )
                         }
                         composable("settings") {
@@ -80,7 +81,8 @@ class MainActivity : ComponentActivity() {
                                 onContinueConfirmation = { walletViewModel.onContinueConfirmation() },
                                 onAddressInputChange = { walletViewModel.onAddressInputChange(it) },
                                 onConnectWithAddress = { walletViewModel.onConnectWithAddress() },
-                                onDismissDialogs = { walletViewModel.onDismissDialogs() }
+                                onDismissDialogs = { walletViewModel.onDismissDialogs() },
+                                onRefreshInscriptions = { walletViewModel.refreshInscriptions() }
                             )
                         }
                         composable("inscription_picker") {

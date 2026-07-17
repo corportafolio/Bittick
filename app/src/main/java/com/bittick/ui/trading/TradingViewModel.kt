@@ -75,6 +75,8 @@ class TradingViewModel @Inject constructor(
     val state: StateFlow<TradingUiState> = _state
     private val announcedOpportunityIds = mutableSetOf<Int>()
     private var pollingJob: Job? = null
+    private var klinesPollingJob: Job? = null
+    private var tickerPollingJob: Job? = null
     private var lastCreatedAt: String? = null
     private val gson = Gson()
 
@@ -86,14 +88,16 @@ class TradingViewModel @Inject constructor(
 
     init {
         loadAll()
-        loadKlines()
-        loadTicker()
         startPolling()
+        startKlinesPolling()
+        startTickerPolling()
     }
 
     override fun onCleared() {
         super.onCleared()
         stopPolling()
+        stopKlinesPolling()
+        stopTickerPolling()
         notifier.destroy()
     }
 
@@ -112,12 +116,46 @@ class TradingViewModel @Inject constructor(
         pollingJob = null
     }
 
+    private fun startKlinesPolling(interval: String = _state.value.chartInterval) {
+        klinesPollingJob?.cancel()
+        klinesPollingJob = viewModelScope.launch {
+            while (isActive) {
+                loadKlines(interval)
+                delay(60_000L)
+            }
+        }
+    }
+
+    private fun stopKlinesPolling() {
+        klinesPollingJob?.cancel()
+        klinesPollingJob = null
+    }
+
+    private fun startTickerPolling() {
+        tickerPollingJob?.cancel()
+        tickerPollingJob = viewModelScope.launch {
+            while (isActive) {
+                loadTicker()
+                delay(60_000L)
+            }
+        }
+    }
+
+    private fun stopTickerPolling() {
+        tickerPollingJob?.cancel()
+        tickerPollingJob = null
+    }
+
     private suspend fun fetchNewOpportunities() {
         try {
             val addr = getWalletAddress()
             val since = if (_state.value.opportunities.isEmpty()) null else lastCreatedAt
             val response = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = since)
             if (response.isSuccessful || response.code() == 300) {
+                val isFreeTier = response.code() == 300
+                if (isFreeTier) {
+                    _state.value = _state.value.copy(isFreeTier = true)
+                }
                 val allItems = response.parsedBody<TradingOpportunitiesResponse>()?.data?.map { it.toItem() } ?: emptyList()
                 val newItems = allItems.filter { it.score >= 5 && it.confidence >= 5 }
                 if (newItems.isNotEmpty()) {
@@ -199,7 +237,7 @@ class TradingViewModel @Inject constructor(
 
     fun loadKlines(interval: String = _state.value.chartInterval) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(chartLoading = true, error = null, chartStatus = "cargando velas $interval...")
+            _state.value = _state.value.copy(chartLoading = true, chartStatus = "cargando velas $interval...")
             try {
                 val response = api.getKlines(interval = interval, limit = 500)
                 if (response.isSuccessful && response.body()?.exito == true) {
@@ -217,7 +255,6 @@ class TradingViewModel @Inject constructor(
                     Log.w("TradingVM", "Error body: $errBody")
                     _state.value = _state.value.copy(
                         chartLoading = false,
-                        error = "Error del servidor al cargar velas (${response.code()})",
                         chartStatus = "error servidor: ${response.code()}"
                     )
                 }
@@ -225,10 +262,15 @@ class TradingViewModel @Inject constructor(
                 Log.e("TradingVM", "loadKlines error", e)
                 _state.value = _state.value.copy(
                     chartLoading = false,
-                    error = "Error de conexión al cargar gráfico: ${e.localizedMessage}",
                     chartStatus = "error conexion: ${e.localizedMessage}"
                 )
             }
+        }
+    }
+
+    fun changeChartInterval(interval: String) {
+        if (interval != _state.value.chartInterval) {
+            startKlinesPolling(interval)
         }
     }
 
