@@ -359,12 +359,46 @@ private fun ConnectedWalletSection(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                    Text(
-                        text = if (isPremium) "PREMIUM" else "GRATIS",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isPremium) Color(0xFFF7931A) else Color.Gray
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isPremium) "PREMIUM" else "GRATIS",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isPremium) Color(0xFFF7931A) else Color.Gray
+                        )
+                        if (botNumber != null) {
+                            Text(
+                                text = "Bot %02d".format(botNumber),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.size(60.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2A2A2A))
+                                .border(2.dp, Color(0xFFF7931A), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            botImageUrl?.let { base64 ->
+                                val bitmap = base64ToBitmap(base64)
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = "Bot image",
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
