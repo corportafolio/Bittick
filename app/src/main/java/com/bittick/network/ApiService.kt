@@ -78,6 +78,11 @@ interface ApiService {
         @Header("x-wallet-address") address: String
     ): Response<WalletInscriptionsResponse>
 
+    @GET("api/auth/fetch-inscriptions")
+    suspend fun fetchInscriptions(
+        @Header("x-wallet-address") address: String
+    ): Response<FetchInscriptionsResponse>
+
     // Preferences
     @GET("api/trading/preferences/{inscriptionId}")
     suspend fun getInscriptionPreferences(
@@ -91,7 +96,7 @@ interface ApiService {
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://192.168.101.74:4001/"
+    const val BASE_URL = "http://192.168.101.74:4001/"
     private const val TIMEOUT = 30L
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {

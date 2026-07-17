@@ -2,6 +2,8 @@ package com.bittick.wallet
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bittick.data.cache.BittickImageCache
@@ -9,13 +11,18 @@ import com.bittick.data.preferences.BittickPreferences
 import com.bittick.network.ApiClient
 import com.bittick.network.InscriptionInfo
 import com.bittick.network.VerifyWalletRequest
+import com.bittick.wallet.WalletSessionManager.AuditResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+private const val TAG = "WalletVM"
 
 data class WalletState(
     val isConnecting: Boolean = false,
@@ -27,14 +34,23 @@ data class WalletState(
     val isPremium: Boolean = false,
     val tier: String? = null,
     val botNumber: Int? = null,
-    val verified: Boolean = false
+    val verified: Boolean = false,
+    // Nuevos estados para flujo manual Unisat (2 diálogos)
+    val showConfirmationDialog: Boolean = false,      // Dialog 1: Confirmar conexión
+    val showAddressInputDialog: Boolean = false,      // Dialog 2: Pegar dirección
+    val pendingNonce: String? = null,
+    val pendingSignature: String? = null,
+    val tempAddressInput: String = "",                // Input temporal en Dialog 2
+    // Mensaje temporal para auditoría
+    val showTemporaryMessage: String? = null
 )
 
 @HiltViewModel
 class WalletViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val imageCache: BittickImageCache,
-    private val preferences: BittickPreferences
+    private val preferences: BittickPreferences,
+    private val sessionManager: WalletSessionManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WalletState())
@@ -42,28 +58,16 @@ class WalletViewModel @Inject constructor(
 
     private val deepLinkHandler = WalletDeepLinkHandler(context)
 
-    private var pendingNonce: String? = null
-    private var pendingMessage: String? = null
-    private var connectStep: ConnectStep = ConnectStep.IDLE
-
-    private enum class ConnectStep { IDLE, SIGNING, GETTING_ADDRESS, VERIFYING }
-
-    fun onDeepLinkResponse(uri: Uri) {
-        when (connectStep) {
-            ConnectStep.SIGNING, ConnectStep.GETTING_ADDRESS -> {
-                deepLinkHandler.handleResponse(uri)
-            }
-            else -> {}
-        }
-    }
+    // FLUJO MANUAL UNISAT (2 diálogos según doc 06)
 
     fun connectWallet() {
+        log("CONEXIÓN: Iniciando flujo Unisat manual")
         viewModelScope.launch {
             _state.value = _state.value.copy(isConnecting = true, error = null)
-            connectStep = ConnectStep.IDLE
 
             try {
-                val nonceResponse = ApiClient.apiService.getNonce("pending")
+                // 1. Obtener nonce del servidor
+                val nonceResponse = ApiClient.apiService.getNonce("sign")
                 if (!nonceResponse.isSuccessful || nonceResponse.body()?.exito != true) {
                     _state.value = _state.value.copy(
                         isConnecting = false,
@@ -73,28 +77,36 @@ class WalletViewModel @Inject constructor(
                 }
 
                 val nonceData = nonceResponse.body()!!.data!!
-                pendingNonce = nonceData.nonce
-                pendingMessage = nonceData.message
+                val nonce = nonceData.nonce
+                val message = nonceData.message
 
-                connectStep = ConnectStep.SIGNING
-                deepLinkHandler.requestSignature(nonceData.nonce) { result ->
+                // 2. Guardar estado pendiente en prefs
+                preferences.setPendingNonce(nonce)
+                preferences.setPendingWalletType("unisat")
+
+                // 3. Abrir Unisat via deep link
+                log("CONEXIÓN: Abriendo Unisat para firma (nonce=$nonce)")
+                _state.value = _state.value.copy(pendingNonce = nonce)
+                deepLinkHandler.requestSignature(nonce) { result ->
                     result.onSuccess { signature ->
-                        pendingNonce = null
-                        pendingMessage = null
-                        getAddressesAndVerify(signature)
+                        log("CONEXIÓN: Firma recibida de Unisat")
+                        _state.value = _state.value.copy(
+                            pendingSignature = signature,
+                            showConfirmationDialog = true,  // DIALOG 1
+                            isConnecting = false
+                        )
                     }
                     result.onFailure { e ->
-                        viewModelScope.launch {
-                            connectStep = ConnectStep.IDLE
-                            _state.value = _state.value.copy(
-                                isConnecting = false,
-                                error = e.message
-                            )
-                        }
+                        log("CONEXIÓN ERROR: ${e.message}")
+                        preferences.clearPendingConnection()
+                        _state.value = _state.value.copy(
+                            isConnecting = false,
+                            error = e.message
+                        )
                     }
                 }
             } catch (e: Exception) {
-                connectStep = ConnectStep.IDLE
+                log("CONEXIÓN EXCEPTION: ${e.message}")
                 _state.value = _state.value.copy(
                     isConnecting = false,
                     error = "Error de conexion: ${e.message}"
@@ -103,99 +115,171 @@ class WalletViewModel @Inject constructor(
         }
     }
 
-    private fun getAddressesAndVerify(signature: String) {
+    fun onContinueConfirmation() {
+        log("CONEXIÓN: Usuario tocó CONTINUAR -> mostrando Dialog 2 (Pegar dirección)")
+        _state.value = _state.value.copy(
+            showConfirmationDialog = false,
+            showAddressInputDialog = true
+        )
+    }
+
+    fun onAddressInputChange(address: String) {
+        _state.value = _state.value.copy(tempAddressInput = address)
+    }
+
+    fun onConnectWithAddress() {
+        val address = _state.value.tempAddressInput.trim()
+
+        if (address.isBlank()) {
+            _state.value = _state.value.copy(error = "Ingresa una dirección válida")
+            return
+        }
+
+        log("CONEXIÓN: Verificando wallet en servidor (address=$address)")
+        _state.value = _state.value.copy(isConnecting = true, showAddressInputDialog = false)
+
         viewModelScope.launch {
             try {
-                val addressNonceResponse = ApiClient.apiService.getNonce("getaddr")
-                if (!addressNonceResponse.isSuccessful || addressNonceResponse.body()?.exito != true) {
+                // Verificar wallet en servidor (firma y nonce son opcionales para flujo manual)
+                val verifyResponse = ApiClient.apiService.verifyWallet(VerifyWalletRequest(
+                    address = address
+                ))
+
+                if (!verifyResponse.isSuccessful || verifyResponse.body()?.exito != true) {
+                    log("CONEXIÓN ERROR: Verificación falló - ${verifyResponse.body()?.error}")
                     _state.value = _state.value.copy(
                         isConnecting = false,
-                        error = "Error obteniendo nonce para direccion"
+                        error = verifyResponse.body()?.error ?: "Error verificando wallet"
                     )
-                    connectStep = ConnectStep.IDLE
                     return@launch
                 }
 
-                val addrNonce = addressNonceResponse.body()!!.data!!.nonce
-                connectStep = ConnectStep.GETTING_ADDRESS
-                deepLinkHandler.requestAddresses(addrNonce) { result ->
-                    result.onSuccess { address ->
-                        connectStep = ConnectStep.VERIFYING
-                        viewModelScope.launch {
-                            verifyOnServer(address, signature)
-                        }
-                    }
-                    result.onFailure { e ->
-                        viewModelScope.launch {
-                            connectStep = ConnectStep.IDLE
-                            _state.value = _state.value.copy(
-                                isConnecting = false,
-                                error = "Error obteniendo direccion: ${e.message}"
-                            )
-                        }
-                    }
+                val data = verifyResponse.body()!!.data!!
+                log("CONEXIÓN OK: Wallet verificada, inscripciones=${data.inscriptions?.size ?: 0}")
+
+                // Descargar imagen del bot seleccionado y convertir a Base64
+                val botImageBase64 = data.selectedInscriptionId?.let { id ->
+                    downloadAndCacheBotImage(data.inscriptions?.firstOrNull { it.inscriptionId == id }?.num ?: 0)
                 }
-            } catch (e: Exception) {
-                connectStep = ConnectStep.IDLE
+
+                // Guardar sesión 7 días con imagen Base64
+                preferences.saveWalletSession(
+                    address = address,
+                    selectedInscriptionId = data.selectedInscriptionId!!,
+                    botNumber = data.selectedBotNum!!,
+                    tier = data.tier!!,
+                    botImageBase64 = botImageBase64 ?: ""
+                )
+                preferences.clearPendingConnection()
+
+                log("SESION GUARDADA: 7 días, bot=${data.selectedBotNum}, tier=${data.tier}")
+
                 _state.value = _state.value.copy(
                     isConnecting = false,
-                    error = "Error de conexion: ${e.message}"
+                    showAddressInputDialog = false,
+                    verified = true,
+                    connectedAddress = address,
+                    inscriptions = data.inscriptions ?: emptyList(),
+                    selectedInscription = data.inscriptions?.firstOrNull { it.inscriptionId == data.selectedInscriptionId },
+                    isPremium = true,
+                    tier = data.tier,
+                    botNumber = data.selectedBotNum,
+                    botImageUrl = botImageBase64,
+                    pendingNonce = null,
+                    pendingSignature = null,
+                    tempAddressInput = ""
                 )
+
+            } catch (e: Exception) {
+                log("CONEXIÓN EXCEPTION: ${e.message}")
+                _state.value = _state.value.copy(isConnecting = false, error = "Error: ${e.message}")
             }
         }
     }
 
-    private suspend fun verifyOnServer(address: String, signature: String) {
-        try {
-            val verifyBody = VerifyWalletRequest(
-                address = address,
-                signature = signature,
-                nonce = pendingNonce ?: ""
-            )
-            val verifyResponse = ApiClient.apiService.verifyWallet(verifyBody)
-            if (!verifyResponse.isSuccessful || verifyResponse.body()?.exito != true) {
-                connectStep = ConnectStep.IDLE
-                _state.value = _state.value.copy(
-                    isConnecting = false,
-                    error = verifyResponse.body()?.error ?: "Error verificando wallet"
-                )
-                return
+    fun onDismissDialogs() {
+        log("CONEXIÓN: Usuario canceló flujo")
+        preferences.clearPendingConnection()
+        _state.value = _state.value.copy(
+            showConfirmationDialog = false,
+            showAddressInputDialog = false,
+            pendingNonce = null,
+            pendingSignature = null,
+            tempAddressInput = "",
+            isConnecting = false
+        )
+    }
+
+    // AUDITORÍA SEMANAL - verifica si la inscripción sigue en la wallet
+    suspend fun runWeeklyAudit(): Boolean {
+        val session = preferences.getWalletSession() ?: return false
+        if (session.expiresAt > System.currentTimeMillis()) return true // No expirada aún
+
+        log("AUDITORÍA PROGRAMADA: Sesión expirada, verificando inscripción ${session.selectedInscriptionId}")
+        val result = sessionManager.auditSelectedInscription(session.address, session.selectedInscriptionId)
+
+        when (result) {
+            AuditResult.Success -> {
+                log("AUDITORÍA OK: Sesión extendida 7 días más")
+                _state.value = _state.value.copy(showTemporaryMessage = "Wallet verificada: 7 días más")
             }
-
-            val data = verifyResponse.body()!!.data!!
-            if (!data.verified) {
-                connectStep = ConnectStep.IDLE
-                _state.value = _state.value.copy(
-                    isConnecting = false,
-                    error = data.message ?: "Wallet no tiene Bittick Agent"
-                )
-                return
+            AuditResult.InscriptionSold -> {
+                log("AUDITORÍA FALLÓ: Inscripción vendida, limpiando sesión")
+                preferences.clearWalletSession()
+                _state.value = WalletState().copy(showTemporaryMessage = "Inscripción vendida: reconecte wallet")
             }
+            AuditResult.NetworkError -> {
+                log("AUDITORÍA ERROR DE RED: Reintentando después")
+                _state.value = _state.value.copy(showTemporaryMessage = "Error de red en verificación")
+            }
+        }
+        return result == AuditResult.Success
+    }
 
-            preferences.setWalletAddress(address)
-            preferences.setSelectedInscriptionId(data.selectedInscriptionId)
-            preferences.setIsPremium(data.tier == "FOUNDER")
-            preferences.setBotNumber(data.selectedBotNum)
+    // RESTAURAR SESIÓN AL INICIO
+    fun restoreSessionIfValid() {
+        val session = preferences.getWalletSession()
+        if (session != null) {
+            log("RESTAURANDO SESIÓN EXISTENTE: address=${session.address}, expiresIn=${session.daysUntilExpiry}d")
+            if (session.expiresAt > System.currentTimeMillis()) {
+                _state.value = sessionManager.restoreSession(session)
+            } else {
+                // Expirada -> disparar auditoría
+                viewModelScope.launch { runWeeklyAudit() }
+            }
+        } else {
+            // Sin sesión -> verificar si hay conexión pendiente (retorno manual Unisat)
+            checkPendingConnection()
+        }
+    }
 
-            connectStep = ConnectStep.IDLE
+    fun checkPendingConnection() {
+        val nonce = preferences.getPendingNonce()
+        if (nonce != null) {
+            log("RETORNO DETECTADO: Nonce pendiente encontrado -> mostrando Dialog 1")
             _state.value = _state.value.copy(
-                isConnecting = false,
-                verified = true,
-                connectedAddress = address,
-                inscriptions = data.inscriptions ?: emptyList(),
-                selectedInscription = data.inscriptions?.firstOrNull { it.selected == true },
-                isPremium = data.tier == "FOUNDER",
-                tier = data.tier,
-                botNumber = data.selectedBotNum
+                showConfirmationDialog = true,
+                pendingNonce = nonce
             )
+        }
+    }
 
-            data.selectedInscriptionId?.let { loadBotImage(it) }
-        } catch (e: Exception) {
-            connectStep = ConnectStep.IDLE
-            _state.value = _state.value.copy(
-                isConnecting = false,
-                error = "Error de conexion: ${e.message}"
-            )
+    private suspend fun downloadAndCacheBotImage(botNum: Int): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = "${ApiClient.BASE_URL}/api/auth/bot-image/${botNum.toString().padStart(2, '0')}"
+                val inputStream = java.net.URL(url).openStream()
+                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                inputStream.close()
+                bitmap?.let {
+                    val byteArrayOutputStream = java.io.ByteArrayOutputStream()
+                    it.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, byteArrayOutputStream)
+                    Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.NO_WRAP)
+                }
+            } catch (e: Exception) {
+                log("ERROR descargando imagen bot $botNum: ${e.message}")
+                null
+            }
         }
     }
 
@@ -238,8 +322,13 @@ class WalletViewModel @Inject constructor(
     }
 
     fun disconnectWallet() {
-        preferences.clearWalletData()
+        log("DISCONNECT: Desconectando wallet")
+        preferences.clearWalletSession()
         imageCache.clearCache()
         _state.value = WalletState()
+    }
+
+    private fun log(message: String) {
+        Log.d(TAG, message)
     }
 }

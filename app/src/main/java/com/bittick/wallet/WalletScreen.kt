@@ -2,6 +2,8 @@ package com.bittick.wallet
 
 import android.graphics.BitmapFactory
 import android.util.Base64
+import android.view.View
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
@@ -12,18 +14,140 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bittick.network.InscriptionInfo
+import com.bittick.wallet.WalletState
+
+@Composable
+private fun ConfirmationDialog(
+    onContinue: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirmar Conexión", fontWeight = FontWeight.Bold, color = Color.White) },
+        text = {
+            Column(Modifier.padding(16.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Paso 1 completado",
+                        tint = Color(0xFF00D4AA)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Paso 1: Abrir UniSat", fontSize = 16.sp, color = Color.White)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Paso 2 completado",
+                        tint = Color(0xFF00D4AA)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Paso 2: Firmas completadas en UniSat", fontSize = 16.sp, color = Color.White)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7931A))
+            ) {
+                Text("CONTINUAR", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancelar", fontWeight = FontWeight.Medium, color = Color.Gray)
+            }
+        }
+    )
+}
+
+@Composable
+private fun AddressInputDialog(
+    currentAddress: String,
+    onAddressChange: (String) -> Unit,
+    onConnect: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val clipboardManager = LocalClipboardManager.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pega tu dirección de UniSat", fontWeight = FontWeight.Bold, color = Color.White) },
+        text = {
+            Column(Modifier.padding(16.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                TextField(
+                    value = currentAddress,
+                    onValueChange = onAddressChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("bc1p...", color = Color.Gray) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done)
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = {
+                        clipboardManager.getText()?.let { text -> onAddressChange(text.toString()) }
+                    }) {
+                        Text("PEGAR", fontWeight = FontWeight.Bold, color = Color(0xFFF7931A))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConnect,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = currentAddress.trim().isNotBlank(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (currentAddress.trim().isNotBlank()) Color(0xFFF7931A) else Color.Gray.copy(alpha = 0.5f)
+                )
+            ) {
+                Text("CONECTAR", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancelar", fontWeight = FontWeight.Medium, color = Color.Gray)
+            }
+        }
+    )
+}
 
 @Composable
 fun WalletScreen(
@@ -31,48 +155,74 @@ fun WalletScreen(
     onConnectWallet: () -> Unit,
     onSelectInscription: (InscriptionInfo) -> Unit,
     onDisconnectWallet: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onContinueConfirmation: () -> Unit = {},
+    onAddressInputChange: (String) -> Unit = {},
+    onConnectWithAddress: () -> Unit = {},
+    onDismissDialogs: () -> Unit = {}
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = "Cuenta Bittick",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            IconButton(onClick = onDismiss) {
-                Text("✕", color = Color.Gray, fontSize = 20.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Cuenta Bittick",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                IconButton(onClick = onDismiss) {
+                    Text("✕", color = Color.Gray, fontSize = 20.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (walletState.connectedAddress == null) {
+                ConnectWalletSection(
+                    isConnecting = walletState.isConnecting,
+                    error = walletState.error,
+                    onConnectWallet = onConnectWallet
+                )
+            } else {
+                ConnectedWalletSection(
+                    address = walletState.connectedAddress,
+                    inscriptions = walletState.inscriptions,
+                    selectedInscription = walletState.selectedInscription,
+                    botImageUrl = walletState.botImageUrl,
+                    isPremium = walletState.isPremium,
+                    tier = walletState.tier,
+                    botNumber = walletState.botNumber,
+                    onSelectInscription = onSelectInscription,
+                    onDisconnectWallet = onDisconnectWallet
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (walletState.connectedAddress == null) {
-            ConnectWalletSection(
-                isConnecting = walletState.isConnecting,
-                error = walletState.error,
-                onConnectWallet = onConnectWallet
+        // Dialog 1: Confirmación de conexión (aparece al volver de UniSat con nonce pendiente)
+        if (walletState.showConfirmationDialog) {
+            ConfirmationDialog(
+                onContinue = onContinueConfirmation,
+                onDismiss = onDismissDialogs
             )
-        } else {
-            ConnectedWalletSection(
-                address = walletState.connectedAddress,
-                inscriptions = walletState.inscriptions,
-                selectedInscription = walletState.selectedInscription,
-                botImageUrl = walletState.botImageUrl,
-                isPremium = walletState.isPremium,
-                tier = walletState.tier,
-                botNumber = walletState.botNumber,
-                onSelectInscription = onSelectInscription,
-                onDisconnectWallet = onDisconnectWallet
+        }
+
+        // Dialog 2: Pegar dirección de wallet (aparece al tocar CONTINUAR en Dialog 1)
+        if (walletState.showAddressInputDialog) {
+            AddressInputDialog(
+                currentAddress = walletState.tempAddressInput,
+                onAddressChange = onAddressInputChange,
+                onConnect = onConnectWithAddress,
+                onDismiss = onDismissDialogs
             )
         }
     }

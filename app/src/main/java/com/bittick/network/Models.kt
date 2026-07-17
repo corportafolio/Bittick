@@ -104,7 +104,7 @@ data class ChartZone(
 data class NonceResponse(val exito: Boolean, val data: NonceData?)
 data class NonceData(val nonce: String, val message: String)
 
-data class VerifyWalletRequest(val address: String, val signature: String, val nonce: String)
+data class VerifyWalletRequest(val address: String, val signature: String? = null, val nonce: String? = null)
 
 data class VerifyWalletResponse(
     val exito: Boolean,
@@ -157,6 +157,18 @@ data class WalletInscriptionsData(
     val selectedInscriptionId: String?,
     val selectedBotNum: Int?,
     val tier: String?
+)
+
+data class FetchInscriptionsResponse(
+    val exito: Boolean,
+    val data: FetchInscriptionsData?,
+    val error: String?
+)
+
+data class FetchInscriptionsData(
+    val inscriptions: List<InscriptionInfo>,
+    val count: Int,
+    val error: String?
 )
 
 // Preferences

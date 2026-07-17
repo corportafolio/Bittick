@@ -7,7 +7,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -21,7 +25,6 @@ import com.bittick.wallet.WalletViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -41,6 +44,17 @@ class MainActivity : ComponentActivity() {
                     val walletViewModel: WalletViewModel = hiltViewModel()
                     this.walletViewModel = walletViewModel
                     val walletState by walletViewModel.state.collectAsState()
+
+                    // Detectar retorno de UniSat (manual) en cada ON_RESUME
+                    DisposableEffect(Unit) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                walletViewModel.restoreSessionIfValid()
+                            }
+                        }
+                        lifecycle.addObserver(observer)
+                        onDispose { lifecycle.removeObserver(observer) }
+                    }
 
                     NavHost(navController = navController, startDestination = "trading") {
                         composable("trading") {
@@ -62,7 +76,11 @@ class MainActivity : ComponentActivity() {
                                 onConnectWallet = { walletViewModel.connectWallet() },
                                 onSelectInscription = { walletViewModel.selectInscription(it) },
                                 onDisconnectWallet = { walletViewModel.disconnectWallet() },
-                                onDismiss = { navController.popBackStack() }
+                                onDismiss = { navController.popBackStack() },
+                                onContinueConfirmation = { walletViewModel.onContinueConfirmation() },
+                                onAddressInputChange = { walletViewModel.onAddressInputChange(it) },
+                                onConnectWithAddress = { walletViewModel.onConnectWithAddress() },
+                                onDismissDialogs = { walletViewModel.onDismissDialogs() }
                             )
                         }
                         composable("inscription_picker") {
@@ -83,7 +101,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         intent.data?.let { uri ->
             if (uri.scheme == "unisat" && uri.host == "response") {
-                walletViewModel?.onDeepLinkResponse(uri)
+                walletViewModel?.checkPendingConnection()
             }
         }
     }
