@@ -1,7 +1,11 @@
 package com.bittick.ui.trading
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,9 +28,13 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -51,6 +59,8 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -337,13 +347,19 @@ private fun BotSection(
     viewModel: TradingViewModel
 ) {
     val enabled = status?.enabled == true
+    val expanded = remember { mutableStateOf(true) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded.value = !expanded.value },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (enabled) BittickColor else Secondary, modifier = Modifier.height(20.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("BOT $label BTC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
@@ -351,24 +367,31 @@ private fun BotSection(
                 Text(if (enabled) "ACTIVO" else "INACTIVO",
                     color = if (enabled) Color(0xFF1B5E20) else Color(0xFFB71C1C),
                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                Icon(
+                    imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded.value) "Colapsar" else "Expandir",
+                    tint = Secondary
+                )
             }
 
-            if (status != null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                val balance = status.balance
-                if (balance != null) {
-                    Text("Balance: \$${"%.2f".format(balance.total)} (disponible: \$${"%.2f".format(balance.available)})",
-                        style = MaterialTheme.typography.bodySmall, color = Secondary)
+            AnimatedVisibility(visible = expanded.value, enter = expandVertically(), exit = shrinkVertically()) {
+                if (status != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val balance = status.balance
+                    if (balance != null) {
+                        Text("Balance: \$${"%.2f".format(balance.total)} (disponible: \$${"%.2f".format(balance.available)})",
+                            style = MaterialTheme.typography.bodySmall, color = Secondary)
+                    }
+                    Text("Posiciones abiertas: ${status.openPositions}/${status.maxPositions}  PNL Total: \$${"%.2f".format(status.totalPnl)}",
+                        style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
                 }
-                Text("Posiciones abiertas: ${status.openPositions}/${status.maxPositions}  PNL Total: \$${"%.2f".format(status.totalPnl)}",
-                    style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
-            }
 
-            if (positions.isEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
-            } else {
-                positions.forEach { pos -> PositionCard(pos, viewModel) }
+                if (positions.isEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
+                } else {
+                    positions.forEach { pos -> PositionCard(pos, viewModel) }
+                }
             }
         }
     }
@@ -376,11 +399,27 @@ private fun BotSection(
 
 @Composable
 private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
+    val typeLabel = when (pos.bot_type) {
+        "spot" -> "SPOT"
+        "futures" -> if (pos.strategy_type == "long") "LONG" else "SHORT"
+        else -> pos.strategy_type.uppercase()
+    }
     val isLong = pos.strategy_type == "long"
-    val signalColor = if (isLong) Color(0xFF1B5E20) else Color(0xFFB71C1C)
-    val signalBg = if (isLong) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
-    val icon = if (isLong) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
-    val typeLabel = if (isLong) "LONG" else "SHORT"
+    val signalColor = when (pos.bot_type) {
+        "spot" -> Color(0xFFF57C00)
+        "futures" -> if (isLong) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+        else -> if (isLong) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+    }
+    val signalBg = when (pos.bot_type) {
+        "spot" -> Color(0xFFFFF3E0)
+        "futures" -> if (isLong) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+        else -> if (isLong) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+    }
+    val icon = when (pos.bot_type) {
+        "spot" -> Icons.Default.ShoppingBasket
+        "futures" -> if (isLong) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
+        else -> if (isLong) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
+    }
     val pnlColor = if (pos.pnl >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
 
     Card(
@@ -440,11 +479,15 @@ private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
 
 @Composable
 private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit) {
+    val typeLabel = when (op.type) {
+        "long" -> "LONG"
+        "short" -> "SHORT"
+        else -> op.type.uppercase()
+    }
     val isLong = op.type == "long"
     val signalColor = if (isLong) Color(0xFF1B5E20) else Color(0xFFB71C1C)
     val signalBg = if (isLong) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
     val icon = if (isLong) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
-    val typeLabel = if (isLong) "LONG" else "SHORT"
 
     Card(
         modifier = Modifier.fillMaxWidth(),

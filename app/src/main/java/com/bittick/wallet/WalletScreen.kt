@@ -584,7 +584,6 @@ private fun SelectedInscriptionCard(
 
             Column(
                 modifier = Modifier
-                    .fillMaxHeight()
                     .weight(1f)
                     .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.End,
@@ -671,7 +670,8 @@ private fun InscriptionList(
     onPreviewInscription: (InscriptionInfo) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(inscriptions) { inscription ->
