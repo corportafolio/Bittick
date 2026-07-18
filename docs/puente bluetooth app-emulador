@@ -1,0 +1,9 @@
+candela@cand-HP-EliteBook:~/AndroidStudioProjects/bittick$ 
+
+
+adb reverse tcp:4001 tcp:4001
+
+
+4001
+candela@cand-HP-EliteBook:~/AndroidStudioProjects/bittick$ adb reverse --list
+UsbFfs tcp:4001 tcp:4001

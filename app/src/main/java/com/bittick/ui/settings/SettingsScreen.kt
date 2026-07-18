@@ -200,11 +200,7 @@ private fun AccountSection(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column {
                     Text(
                         text = "Cuenta Bittick",
                         style = MaterialTheme.typography.titleMedium,

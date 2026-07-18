@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import javax.inject.Inject
 
 private const val TAG = "WalletVM"
@@ -64,56 +65,37 @@ class WalletViewModel @Inject constructor(
     // FLUJO MANUAL UNISAT (2 diálogos según doc 06)
 
     fun connectWallet() {
-        log("CONEXIÓN: Iniciando flujo Unisat manual")
+        log("CONEXIÓN: Iniciando flujo Unisat manual (nonce local)")
         viewModelScope.launch {
             _state.value = _state.value.copy(isConnecting = true, error = null)
 
-            try {
-                // 1. Obtener nonce del servidor
-                val nonceResponse = ApiClient.apiService.getNonce("sign")
-                if (!nonceResponse.isSuccessful || nonceResponse.body()?.exito != true) {
+            // Generar nonce local (no requiere servidor)
+            val nonce = UUID.randomUUID().toString()
+
+            // Guardar estado pendiente en prefs
+            preferences.setPendingNonce(nonce)
+            preferences.setPendingWalletType("unisat")
+
+            // Abrir Unisat via deep link directamente (sin llamar al servidor)
+            log("CONEXIÓN: Abriendo Unisat para firma (nonce=$nonce)")
+            _state.value = _state.value.copy(pendingNonce = nonce)
+            deepLinkHandler.requestSignature(nonce) { result ->
+                result.onSuccess { signature ->
+                    log("CONEXIÓN: Firma recibida de Unisat")
+                    _state.value = _state.value.copy(
+                        pendingSignature = signature,
+                        showConfirmationDialog = true,  // DIALOG 1
+                        isConnecting = false
+                    )
+                }
+                result.onFailure { e ->
+                    log("CONEXIÓN ERROR: ${e.message}")
+                    preferences.clearPendingConnection()
                     _state.value = _state.value.copy(
                         isConnecting = false,
-                        error = "Error obteniendo nonce del servidor"
+                        error = e.message
                     )
-                    return@launch
                 }
-
-                val nonceData = nonceResponse.body()!!.data!!
-                val nonce = nonceData.nonce
-                val message = nonceData.message
-
-                // 2. Guardar estado pendiente en prefs
-                preferences.setPendingNonce(nonce)
-                preferences.setPendingWalletType("unisat")
-
-                // 3. Abrir Unisat via deep link
-                log("CONEXIÓN: Abriendo Unisat para firma (nonce=$nonce)")
-                _state.value = _state.value.copy(pendingNonce = nonce)
-                deepLinkHandler.requestSignature(nonce) { result ->
-                    result.onSuccess { signature ->
-                        log("CONEXIÓN: Firma recibida de Unisat")
-                        _state.value = _state.value.copy(
-                            pendingSignature = signature,
-                            showConfirmationDialog = true,  // DIALOG 1
-                            isConnecting = false
-                        )
-                    }
-                    result.onFailure { e ->
-                        log("CONEXIÓN ERROR: ${e.message}")
-                        preferences.clearPendingConnection()
-                        _state.value = _state.value.copy(
-                            isConnecting = false,
-                            error = e.message
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                log("CONEXIÓN EXCEPTION: ${e.message}")
-                _state.value = _state.value.copy(
-                    isConnecting = false,
-                    error = "Error de conexion: ${e.message}"
-                )
             }
         }
     }
