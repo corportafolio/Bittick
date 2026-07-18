@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
                                 onPreviewInscription = { walletViewModel.previewInscription(it) },
                                 onConfirmSelection = { 
                                     walletViewModel.confirmSelection()
-                                    tradingViewModel.refreshPremiumStatus()
+                                    tradingViewModel.loadAll()
                                 },
                                 onDisconnectWallet = { walletViewModel.disconnectWallet() },
                                 onDismiss = { navController.popBackStack() },

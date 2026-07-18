@@ -153,9 +153,7 @@ class TradingViewModel @Inject constructor(
             val response = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = since)
             if (response.isSuccessful || response.code() == 300) {
                 val isFreeTier = response.code() == 300
-                if (isFreeTier) {
-                    _state.value = _state.value.copy(isFreeTier = true)
-                }
+                _state.value = _state.value.copy(isFreeTier = isFreeTier)
                 val allItems = response.parsedBody<TradingOpportunitiesResponse>()?.data?.map { it.toItem() } ?: emptyList()
                 val newItems = allItems.filter { it.score >= 5 && it.confidence >= 5 }
                 if (newItems.isNotEmpty()) {

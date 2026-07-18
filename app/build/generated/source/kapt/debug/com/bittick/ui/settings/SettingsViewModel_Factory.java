@@ -1,7 +1,8 @@
 package com.bittick.ui.settings;
 
 import android.content.Context;
-import com.bittick.network.ApiService;
+import com.bittick.data.cache.BittickImageCache;
+import com.bittick.data.preferences.BittickPreferences;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -25,25 +26,31 @@ import javax.inject.Provider;
 public final class SettingsViewModel_Factory implements Factory<SettingsViewModel> {
   private final Provider<Context> contextProvider;
 
-  private final Provider<ApiService> apiProvider;
+  private final Provider<BittickPreferences> preferencesProvider;
+
+  private final Provider<BittickImageCache> imageCacheProvider;
 
   public SettingsViewModel_Factory(Provider<Context> contextProvider,
-      Provider<ApiService> apiProvider) {
+      Provider<BittickPreferences> preferencesProvider,
+      Provider<BittickImageCache> imageCacheProvider) {
     this.contextProvider = contextProvider;
-    this.apiProvider = apiProvider;
+    this.preferencesProvider = preferencesProvider;
+    this.imageCacheProvider = imageCacheProvider;
   }
 
   @Override
   public SettingsViewModel get() {
-    return newInstance(contextProvider.get(), apiProvider.get());
+    return newInstance(contextProvider.get(), preferencesProvider.get(), imageCacheProvider.get());
   }
 
   public static SettingsViewModel_Factory create(Provider<Context> contextProvider,
-      Provider<ApiService> apiProvider) {
-    return new SettingsViewModel_Factory(contextProvider, apiProvider);
+      Provider<BittickPreferences> preferencesProvider,
+      Provider<BittickImageCache> imageCacheProvider) {
+    return new SettingsViewModel_Factory(contextProvider, preferencesProvider, imageCacheProvider);
   }
 
-  public static SettingsViewModel newInstance(Context context, ApiService api) {
-    return new SettingsViewModel(context, api);
+  public static SettingsViewModel newInstance(Context context, BittickPreferences preferences,
+      BittickImageCache imageCache) {
+    return new SettingsViewModel(context, preferences, imageCache);
   }
 }

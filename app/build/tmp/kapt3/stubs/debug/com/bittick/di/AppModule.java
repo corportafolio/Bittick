@@ -1,7 +1,7 @@
 package com.bittick.di;
 
-import com.bittick.network.ApiClient;
 import com.bittick.network.ApiService;
+import com.bittick.network.ApiClient;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
