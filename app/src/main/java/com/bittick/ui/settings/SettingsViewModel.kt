@@ -57,6 +57,10 @@ class SettingsViewModel @Inject constructor(
         loadWalletState()
     }
 
+    fun refreshWalletState() {
+        loadWalletState()
+    }
+
     fun hasNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
         return ContextCompat.checkSelfPermission(

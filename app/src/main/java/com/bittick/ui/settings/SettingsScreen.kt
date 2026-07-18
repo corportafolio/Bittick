@@ -51,6 +51,10 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    LaunchedEffect(true) {
+        viewModel.refreshWalletState()
+    }
+
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { viewModel.refreshPermissions() }

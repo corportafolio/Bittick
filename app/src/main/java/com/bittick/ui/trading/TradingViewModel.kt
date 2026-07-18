@@ -235,6 +235,18 @@ class TradingViewModel @Inject constructor(
         }
     }
 
+    fun refreshPremiumStatus() {
+        viewModelScope.launch {
+            val addr = getWalletAddress()
+            val oppResponse = api.getTradingOpportunities(walletAddress = addr)
+            val isFreeTier = oppResponse.code() == 300
+            _state.value = _state.value.copy(
+                isFreeTier = isFreeTier,
+                isPremium = !isFreeTier && addr != null
+            )
+        }
+    }
+
     fun loadKlines(interval: String = _state.value.chartInterval) {
         viewModelScope.launch {
             _state.value = _state.value.copy(chartLoading = true, chartStatus = "cargando velas $interval...")

@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
                     val walletViewModel: WalletViewModel = hiltViewModel()
                     this.walletViewModel = walletViewModel
                     val walletState by walletViewModel.state.collectAsState()
+                    val tradingViewModel: com.bittick.ui.trading.TradingViewModel = hiltViewModel()
 
                     // Detectar retorno de UniSat (manual) en cada ON_RESUME
                     DisposableEffect(Unit) {
@@ -76,7 +77,10 @@ class MainActivity : ComponentActivity() {
                                 walletState = walletState,
                                 onConnectWallet = { walletViewModel.connectWallet() },
                                 onPreviewInscription = { walletViewModel.previewInscription(it) },
-                                onConfirmSelection = { walletViewModel.confirmSelection() },
+                                onConfirmSelection = { 
+                                    walletViewModel.confirmSelection()
+                                    tradingViewModel.refreshPremiumStatus()
+                                },
                                 onDisconnectWallet = { walletViewModel.disconnectWallet() },
                                 onDismiss = { navController.popBackStack() },
                                 onContinueConfirmation = { walletViewModel.onContinueConfirmation() },
