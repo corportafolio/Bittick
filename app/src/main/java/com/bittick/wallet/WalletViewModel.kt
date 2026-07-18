@@ -42,7 +42,10 @@ data class WalletState(
     val pendingSignature: String? = null,
     val tempAddressInput: String = "",                // Input temporal en Dialog 2
     // Mensaje temporal para auditoría
-    val showTemporaryMessage: String? = null
+    val showTemporaryMessage: String? = null,
+    // Preview temporal (solo UI, sin server ni prefs)
+    val previewInscription: InscriptionInfo? = null,
+    val previewBotImageUrl: String? = null
 )
 
 @HiltViewModel
@@ -293,9 +296,11 @@ class WalletViewModel @Inject constructor(
                     body = com.bittick.network.SelectInscriptionRequest(inscription.inscriptionId)
                 )
                 if (response.isSuccessful && response.body()?.exito == true) {
-                    preferences.setSelectedInscriptionId(inscription.inscriptionId)
-                    preferences.setIsPremium(inscription.tier == "FOUNDER")
-                    preferences.setBotNumber(inscription.num)
+                    preferences.updateSelectedInscription(
+                        selectedInscriptionId = inscription.inscriptionId,
+                        botNumber = inscription.num,
+                        tier = inscription.tier
+                    )
 
                     _state.value = _state.value.copy(
                         selectedInscription = inscription,
@@ -308,6 +313,58 @@ class WalletViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     error = "Error seleccionando inscripcion: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun previewInscription(inscription: InscriptionInfo) {
+        _state.value = _state.value.copy(
+            previewInscription = inscription,
+            previewBotImageUrl = null
+        )
+        viewModelScope.launch {
+            try {
+                val result = imageCache.getImage(inscription.inscriptionId)
+                result.onSuccess { base64 ->
+                    _state.value = _state.value.copy(previewBotImageUrl = base64)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun confirmSelection() {
+        val preview = _state.value.previewInscription ?: return
+        val address = _state.value.connectedAddress ?: return
+        val previewImageUrl = _state.value.previewBotImageUrl
+
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.apiService.selectInscription(
+                    address = address,
+                    body = com.bittick.network.SelectInscriptionRequest(preview.inscriptionId)
+                )
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    preferences.updateSelectedInscription(
+                        selectedInscriptionId = preview.inscriptionId,
+                        botNumber = preview.num,
+                        tier = preview.tier
+                    )
+
+                    _state.value = _state.value.copy(
+                        selectedInscription = preview,
+                        isPremium = preview.tier == "FOUNDER",
+                        tier = preview.tier,
+                        botNumber = preview.num,
+                        botImageUrl = previewImageUrl,
+                        previewInscription = null,
+                        previewBotImageUrl = null
+                    )
+                    preferences.updateSessionImage(previewImageUrl ?: "")
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    error = "Error confirmando selección: ${e.message}"
                 )
             }
         }

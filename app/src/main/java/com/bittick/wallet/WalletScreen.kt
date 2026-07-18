@@ -153,7 +153,8 @@ private fun AddressInputDialog(
 fun WalletScreen(
     walletState: WalletState,
     onConnectWallet: () -> Unit,
-    onSelectInscription: (InscriptionInfo) -> Unit,
+    onPreviewInscription: (InscriptionInfo) -> Unit,
+    onConfirmSelection: () -> Unit,
     onDisconnectWallet: () -> Unit,
     onDismiss: () -> Unit,
     onContinueConfirmation: () -> Unit = {},
@@ -199,11 +200,14 @@ fun WalletScreen(
                     address = walletState.connectedAddress,
                     inscriptions = walletState.inscriptions,
                     selectedInscription = walletState.selectedInscription,
+                    previewInscription = walletState.previewInscription,
+                    previewBotImageUrl = walletState.previewBotImageUrl,
                     botImageUrl = walletState.botImageUrl,
                     isPremium = walletState.isPremium,
                     tier = walletState.tier,
                     botNumber = walletState.botNumber,
-                    onSelectInscription = onSelectInscription,
+                    onPreviewInscription = onPreviewInscription,
+                    onConfirmSelection = onConfirmSelection,
                     onDisconnectWallet = onDisconnectWallet,
                     onRefreshInscriptions = onRefreshInscriptions
                 )
@@ -328,11 +332,14 @@ private fun ConnectedWalletSection(
     address: String,
     inscriptions: List<InscriptionInfo>,
     selectedInscription: InscriptionInfo?,
+    previewInscription: InscriptionInfo?,
+    previewBotImageUrl: String?,
     botImageUrl: String?,
     isPremium: Boolean,
     tier: String?,
     botNumber: Int?,
-    onSelectInscription: (InscriptionInfo) -> Unit,
+    onPreviewInscription: (InscriptionInfo) -> Unit,
+    onConfirmSelection: () -> Unit,
     onDisconnectWallet: () -> Unit,
     onRefreshInscriptions: () -> Unit
 ) {
@@ -384,8 +391,8 @@ private fun ConnectedWalletSection(
                                 .border(2.dp, Color(0xFFF7931A), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            botImageUrl?.let { base64 ->
-                                val bitmap = base64ToBitmap(base64)
+                            botImageUrl?.takeIf { it.isNotBlank() }?.let { base64 ->
+                                val bitmap = walletBase64ToBitmap(base64)
                                 if (bitmap != null) {
                                     Image(
                                         bitmap = bitmap.asImageBitmap(),
@@ -450,13 +457,15 @@ private fun ConnectedWalletSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (selectedInscription != null) {
+        if (previewInscription != null) {
             SelectedInscriptionCard(
-                inscription = selectedInscription,
-                botImageUrl = botImageUrl,
+                inscription = previewInscription,
+                botImageUrl = previewBotImageUrl,
                 isPremium = isPremium,
                 tier = tier,
-                botNumber = botNumber
+                botNumber = botNumber,
+                selectedInscription = selectedInscription,
+                onConfirmSelection = onConfirmSelection
             )
         }
 
@@ -490,7 +499,7 @@ private fun ConnectedWalletSection(
             InscriptionList(
                 inscriptions = inscriptions,
                 selectedInscription = selectedInscription,
-                onSelectInscription = onSelectInscription
+                onPreviewInscription = onPreviewInscription
             )
         }
     }
@@ -502,8 +511,11 @@ private fun SelectedInscriptionCard(
     botImageUrl: String?,
     isPremium: Boolean,
     tier: String?,
-    botNumber: Int?
+    botNumber: Int?,
+    selectedInscription: InscriptionInfo?,
+    onConfirmSelection: () -> Unit
 ) {
+    val isAlreadySelected = selectedInscription?.inscriptionId == inscription.inscriptionId
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -517,15 +529,28 @@ private fun SelectedInscriptionCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (botImageUrl != null) {
-                Image(
-                    bitmap = base64ToBitmap(botImageUrl).asImageBitmap(),
-                    contentDescription = "Bot Image",
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .border(2.dp, Color(0xFFF7931A), CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                val bitmap = walletBase64ToBitmap(botImageUrl)
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Bot Image",
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color(0xFFF7931A), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color(0xFFF7931A), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "🤖", fontSize = 32.sp)
+                    }
+                }
             } else {
                 Box(
                     modifier = Modifier
@@ -557,19 +582,51 @@ private fun SelectedInscriptionCard(
                 )
             }
 
-            if (isPremium) {
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .background(Color(0xFFF7931A), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (isPremium) {
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .background(Color(0xFFF7931A), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "PREMIUM",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+                }
+
+                if (isAlreadySelected) {
                     Text(
-                        text = "PREMIUM",
-                        fontSize = 10.sp,
+                        text = "SELECCIONADO",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color(0xFF00BCD4)
                     )
+                } else {
+                    Button(
+                        onClick = onConfirmSelection,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF00BCD4)
+                        )
+                    ) {
+                        Text(
+                            text = "USAR",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
                 }
             }
         }
@@ -611,7 +668,7 @@ private fun EmptyInscriptionsSection() {
 private fun InscriptionList(
     inscriptions: List<InscriptionInfo>,
     selectedInscription: InscriptionInfo?,
-    onSelectInscription: (InscriptionInfo) -> Unit
+    onPreviewInscription: (InscriptionInfo) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -621,7 +678,7 @@ private fun InscriptionList(
             InscriptionCard(
                 inscription = inscription,
                 isSelected = inscription.inscriptionId == selectedInscription?.inscriptionId,
-                onSelectInscription = onSelectInscription
+                onPreviewInscription = onPreviewInscription
             )
         }
     }
@@ -631,12 +688,12 @@ private fun InscriptionList(
 private fun InscriptionCard(
     inscription: InscriptionInfo,
     isSelected: Boolean,
-    onSelectInscription: (InscriptionInfo) -> Unit
+    onPreviewInscription: (InscriptionInfo) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelectInscription(inscription) },
+            .clickable { onPreviewInscription(inscription) },
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) Color(0xFFF7931A).copy(alpha = 0.2f) else Color(0xFF1E1E1E)
         ),
@@ -694,7 +751,13 @@ private fun InscriptionCard(
     }
 }
 
-private fun base64ToBitmap(base64: String): android.graphics.Bitmap {
-    val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
-    return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+private fun walletBase64ToBitmap(base64: String): android.graphics.Bitmap? {
+    return try {
+        if (base64.isBlank()) return null
+        val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
+        if (bytes.isEmpty()) return null
+        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    } catch (_: Exception) {
+        null
+    }
 }

@@ -75,7 +75,8 @@ class MainActivity : ComponentActivity() {
                             WalletScreen(
                                 walletState = walletState,
                                 onConnectWallet = { walletViewModel.connectWallet() },
-                                onSelectInscription = { walletViewModel.selectInscription(it) },
+                                onPreviewInscription = { walletViewModel.previewInscription(it) },
+                                onConfirmSelection = { walletViewModel.confirmSelection() },
                                 onDisconnectWallet = { walletViewModel.disconnectWallet() },
                                 onDismiss = { navController.popBackStack() },
                                 onContinueConfirmation = { walletViewModel.onContinueConfirmation() },

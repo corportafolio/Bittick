@@ -190,4 +190,39 @@ class BittickPreferences @Inject constructor(
             .remove(KEY_PENDING_WALLET_TYPE)
             .apply()
     }
+
+    fun updateSelectedInscription(
+        selectedInscriptionId: String,
+        botNumber: Int,
+        tier: String
+    ) {
+        val sessionJson = prefs.getString(KEY_WALLET_SESSION, null) ?: return
+        val session = gson.fromJson(sessionJson, WalletSession::class.java)
+        val updated = WalletSession(
+            address = session.address,
+            selectedInscriptionId = selectedInscriptionId,
+            botNumber = botNumber,
+            tier = tier,
+            botImageBase64 = session.botImageBase64,
+            expiresAt = session.expiresAt
+        )
+        prefs.edit().putString(KEY_WALLET_SESSION, gson.toJson(updated)).apply()
+        setSelectedInscriptionId(selectedInscriptionId)
+        setIsPremium(tier == "FOUNDER")
+        setBotNumber(botNumber)
+    }
+
+    fun updateSessionImage(botImageBase64: String) {
+        val sessionJson = prefs.getString(KEY_WALLET_SESSION, null) ?: return
+        val session = gson.fromJson(sessionJson, WalletSession::class.java)
+        val updated = WalletSession(
+            address = session.address,
+            selectedInscriptionId = session.selectedInscriptionId,
+            botNumber = session.botNumber,
+            tier = session.tier,
+            botImageBase64 = botImageBase64,
+            expiresAt = session.expiresAt
+        )
+        prefs.edit().putString(KEY_WALLET_SESSION, gson.toJson(updated)).apply()
+    }
 }

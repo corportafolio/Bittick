@@ -85,6 +85,7 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadWalletState() {
         val address = preferences.getWalletAddress() ?: return
+        val session = preferences.getWalletSession()
         val inscriptionId = preferences.getSelectedInscriptionId()
         val isPremium = preferences.getIsPremium()
         val botNumber = preferences.getBotNumber()
@@ -92,7 +93,8 @@ class SettingsViewModel @Inject constructor(
         _state.value = _state.value.copy(
             walletAddress = address,
             isPremium = isPremium,
-            botNumber = botNumber
+            botNumber = botNumber,
+            botImageUrl = session?.botImageBase64?.takeIf { it.isNotBlank() }
         )
 
         if (inscriptionId != null) {

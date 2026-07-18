@@ -166,17 +166,19 @@ private fun AccountSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (botImageUrl != null) {
-                Image(
-                    bitmap = base64ToBitmap(botImageUrl).asImageBitmap(),
-                    contentDescription = "Bot Image",
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .border(2.dp, if (isPremium) Color(0xFFF7931A) else Color.Gray, CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(
+                val bitmap = base64ToBitmap(botImageUrl)
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Bot Image",
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, if (isPremium) Color(0xFFF7931A) else Color.Gray, CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
                     modifier = Modifier
                         .size(64.dp)
                         .clip(CircleShape)
@@ -187,18 +189,33 @@ private fun AccountSection(
                         text = "🤖",
                         fontSize = 32.sp
                     )
+}
                 }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Cuenta Bittick",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Secondary,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Cuenta Bittick",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Secondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (botNumber != null) {
+                        Text(
+                            text = "Bot #%02d".format(botNumber),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
 
                 if (walletAddress == null) {
                     Text(
@@ -485,7 +502,13 @@ private fun BotPreferenceRow(
     }
 }
 
-private fun base64ToBitmap(base64: String): android.graphics.Bitmap {
-    val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
-    return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+private fun base64ToBitmap(base64: String): android.graphics.Bitmap? {
+    return try {
+        if (base64.isBlank()) return null
+        val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
+        if (bytes.isEmpty()) return null
+        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    } catch (_: Exception) {
+        null
+    }
 }

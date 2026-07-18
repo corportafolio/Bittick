@@ -535,7 +535,9 @@ private fun formatDayOfWeekSpanish(isoDate: String): String {
 
 private fun base64ToBitmap(base64: String): android.graphics.Bitmap? {
     return try {
+        if (base64.isBlank()) return null
         val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
+        if (bytes.isEmpty()) return null
         android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     } catch (e: Exception) {
         null

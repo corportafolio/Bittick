@@ -96,7 +96,7 @@ interface ApiService {
 }
 
 object ApiClient {
-    const val BASE_URL = "http://192.168.101.74:4001/"
+    const val BASE_URL = "http://localhost:4001/"
     private const val TIMEOUT = 30L
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
