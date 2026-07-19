@@ -197,21 +197,20 @@ class TradingViewModel @Inject constructor(
                     (oppResponse.parsedBody<TradingOpportunitiesResponse>()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
                 } else emptyList()
 
-                val spotPos = if (posResponse.isSuccessful || posResponse.code() == 300) {
-                    (posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()).filter { it.bot_type == "spot" }
+                val allPositions = if (posResponse.isSuccessful || posResponse.code() == 300) {
+                    posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()
                 } else emptyList()
+                val spotPos = allPositions.filter { it.bot_type == "spot" }
+                val futuresPos = allPositions.filter { it.bot_type == "futures" }
 
-                val futuresPos = if (posResponse.isSuccessful || posResponse.code() == 300) {
-                    (posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()).filter { it.bot_type == "futures" }
-                } else emptyList()
-
-                val spotStatus = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
-                    botStatusResponse.parsedBody<BotStatusResponse>()?.data?.spot
+                val botStatusData = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
+                    botStatusResponse.parsedBody<BotStatusResponse>()?.data
                 } else null
+                val spotStatus = botStatusData?.spot
+                val futuresStatus = botStatusData?.futures
 
-                val futuresStatus = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
-                    botStatusResponse.parsedBody<BotStatusResponse>()?.data?.futures
-                } else null
+                Log.d("TradingVM", "loadAll() addr=$addr | oppCode=${oppResponse.code()} | posCode=${posResponse.code()} | botCode=${botStatusResponse.code()}")
+                Log.d("TradingVM", "loadAll() spotPos=${spotPos.size} futuresPos=${futuresPos.size} | spotEnabled=${spotStatus?.enabled} futuresEnabled=${futuresStatus?.enabled} | isFreeTier=$isFreeTier")
 
                 _state.value = _state.value.copy(
                     opportunities = opportunities,

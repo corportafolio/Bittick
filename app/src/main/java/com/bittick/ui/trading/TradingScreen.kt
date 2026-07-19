@@ -57,6 +57,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,11 +94,16 @@ fun TradingScreen(
     onWalletClick: () -> Unit = {},
     walletAddress: String? = null,
     botImageUrl: String? = null,
+    refreshTrigger: Int = 0,
     viewModel: TradingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(refreshTrigger) {
+        viewModel.loadAll()
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,

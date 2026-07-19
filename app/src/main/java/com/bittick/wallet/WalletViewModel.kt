@@ -315,10 +315,16 @@ class WalletViewModel @Inject constructor(
         }
     }
 
-    fun confirmSelection() {
-        val preview = _state.value.previewInscription ?: return
-        val address = _state.value.connectedAddress ?: return
+    fun confirmSelection(onComplete: () -> Unit = {}) {
+        val preview = _state.value.previewInscription
+        val address = _state.value.connectedAddress
+        if (preview == null || address == null) {
+            onComplete()
+            return
+        }
         val previewImageUrl = _state.value.previewBotImageUrl
+
+        Log.d(TAG, "USAR presionado: Bot #${preview.num} | tier=${preview.tier} | inscriptionId=${preview.inscriptionId}")
 
         viewModelScope.launch {
             try {
@@ -327,6 +333,7 @@ class WalletViewModel @Inject constructor(
                     body = com.bittick.network.SelectInscriptionRequest(preview.inscriptionId)
                 )
                 if (response.isSuccessful && response.body()?.exito == true) {
+                    Log.d(TAG, "Bot #${preview.num} seleccionado exitosamente")
                     preferences.updateSelectedInscription(
                         selectedInscriptionId = preview.inscriptionId,
                         botNumber = preview.num,
@@ -343,12 +350,16 @@ class WalletViewModel @Inject constructor(
                         previewBotImageUrl = null
                     )
                     preferences.updateSessionImage(previewImageUrl ?: "")
+                } else {
+                    Log.e(TAG, "Bot #${preview.num} falló: code=${response.code()}")
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Bot #${preview.num} error: ${e.message}")
                 _state.value = _state.value.copy(
                     error = "Error confirmando selección: ${e.message}"
                 )
             }
+            onComplete()
         }
     }
 

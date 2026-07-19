@@ -9,6 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -44,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     val walletViewModel: WalletViewModel = hiltViewModel()
                     this.walletViewModel = walletViewModel
                     val walletState by walletViewModel.state.collectAsState()
-                    val tradingViewModel: com.bittick.ui.trading.TradingViewModel = hiltViewModel()
+                    var tradingRefreshTrigger by remember { mutableIntStateOf(0) }
 
                     // Detectar retorno de UniSat (manual) en cada ON_RESUME
                     DisposableEffect(Unit) {
@@ -63,7 +66,8 @@ class MainActivity : ComponentActivity() {
                                 onSettingsClick = { navController.navigate("settings") },
                                 onWalletClick = { navController.navigate("wallet") },
                                 walletAddress = walletState.connectedAddress ?: preferences.getWalletAddress(),
-                                botImageUrl = walletState.botImageUrl
+                                botImageUrl = walletState.botImageUrl,
+                                refreshTrigger = tradingRefreshTrigger
                             )
                         }
                         composable("settings") {
@@ -78,8 +82,10 @@ class MainActivity : ComponentActivity() {
                                 onConnectWallet = { walletViewModel.connectWallet() },
                                 onPreviewInscription = { walletViewModel.previewInscription(it) },
                                 onConfirmSelection = { 
-                                    walletViewModel.confirmSelection()
-                                    tradingViewModel.loadAll()
+                                    walletViewModel.confirmSelection {
+                                        tradingRefreshTrigger++
+                                        navController.popBackStack()
+                                    }
                                 },
                                 onDisconnectWallet = { walletViewModel.disconnectWallet() },
                                 onDismiss = { navController.popBackStack() },
