@@ -364,9 +364,7 @@ private fun BotSection(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded.value = !expanded.value },
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (enabled) BittickColor else Secondary, modifier = Modifier.height(20.dp))
@@ -376,37 +374,41 @@ private fun BotSection(
                 Text(if (enabled) "ACTIVO" else "INACTIVO",
                     color = if (enabled) Color(0xFF1B5E20) else Color(0xFFB71C1C),
                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
-                Icon(
-                    imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded.value) "Colapsar" else "Expandir",
-                    tint = Secondary
-                )
+            }
+
+            if (status != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val balance = status.balance
+                if (balance != null) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Text("Balance: \$${"%.2f".format(balance.total)}",
+                            style = MaterialTheme.typography.bodySmall, color = Secondary)
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text("Disponible: \$${"%.2f".format(balance.available)}",
+                            style = MaterialTheme.typography.bodySmall, color = Secondary)
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { expanded.value = !expanded.value },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Posiciones: ${status.openPositions}/${status.maxPositions}",
+                        style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("PNL: \$${"%.2f".format(status.totalPnl)}",
+                        style = MaterialTheme.typography.bodySmall, color = if (status.totalPnl >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (expanded.value) "Colapsar" else "Expandir",
+                        tint = Secondary
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
             AnimatedVisibility(visible = expanded.value, enter = expandVertically(), exit = shrinkVertically()) {
                 Column {
-                    if (status != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val balance = status.balance
-                        if (balance != null) {
-                            Row(Modifier.fillMaxWidth()) {
-                                Text("Balance: \$${"%.2f".format(balance.total)}",
-                                    style = MaterialTheme.typography.bodySmall, color = Secondary)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("Disponible: \$${"%.2f".format(balance.available)}",
-                                    style = MaterialTheme.typography.bodySmall, color = Secondary)
-                            }
-                        }
-                        Row(Modifier.fillMaxWidth()) {
-                            Text("Posiciones: ${status.openPositions}/${status.maxPositions}",
-                                style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
-                            Spacer(modifier = Modifier.weight(1f))
-                            Text("PNL: \$${"%.2f".format(status.totalPnl)}",
-                                style = MaterialTheme.typography.bodySmall, color = if (status.totalPnl >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C))
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-
                     if (positions.isEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
