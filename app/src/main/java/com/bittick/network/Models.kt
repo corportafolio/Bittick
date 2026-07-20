@@ -48,7 +48,10 @@ data class BotPosition(
     val usd_amount: Double?,
     val status: String?,
     val pnl: Double,
-    val pnl_percent: Double
+    val pnl_percent: Double,
+    val opened_at: String? = null,
+    val closed_at: String? = null,
+    val close_reason: String? = null
 )
 
 data class BotStatusItem(

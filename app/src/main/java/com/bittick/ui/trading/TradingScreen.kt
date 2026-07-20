@@ -3,6 +3,7 @@ package com.bittick.ui.trading
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBasket
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -300,8 +302,8 @@ fun TradingScreen(
                         }
 
                         if (!state.isFreeTier) {
-                            item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel) }
-                            item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel) }
+                            item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel, state.botNumber) }
+                            item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel, state.botNumber) }
                         }
 
                         state.error?.let { err ->
@@ -350,7 +352,8 @@ private fun BotSection(
     label: String,
     status: BotStatusItem?,
     positions: List<BotPosition>,
-    viewModel: TradingViewModel
+    viewModel: TradingViewModel,
+    botNumber: Int = 0
 ) {
     val enabled = status?.enabled == true
     val expanded = remember { mutableStateOf(true) }
@@ -368,7 +371,7 @@ private fun BotSection(
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (enabled) BittickColor else Secondary, modifier = Modifier.height(20.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("BOT $label BTC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text("BOT $botNumber $label BTC", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.weight(1f))
                 Text(if (enabled) "ACTIVO" else "INACTIVO",
                     color = if (enabled) Color(0xFF1B5E20) else Color(0xFFB71C1C),
@@ -381,22 +384,35 @@ private fun BotSection(
             }
 
             AnimatedVisibility(visible = expanded.value, enter = expandVertically(), exit = shrinkVertically()) {
-                if (status != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val balance = status.balance
-                    if (balance != null) {
-                        Text("Balance: \$${"%.2f".format(balance.total)} (disponible: \$${"%.2f".format(balance.available)})",
-                            style = MaterialTheme.typography.bodySmall, color = Secondary)
+                Column {
+                    if (status != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val balance = status.balance
+                        if (balance != null) {
+                            Row(Modifier.fillMaxWidth()) {
+                                Text("Balance: \$${"%.2f".format(balance.total)}",
+                                    style = MaterialTheme.typography.bodySmall, color = Secondary)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text("Disponible: \$${"%.2f".format(balance.available)}",
+                                    style = MaterialTheme.typography.bodySmall, color = Secondary)
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth()) {
+                            Text("Posiciones: ${status.openPositions}/${status.maxPositions}",
+                                style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text("PNL: \$${"%.2f".format(status.totalPnl)}",
+                                style = MaterialTheme.typography.bodySmall, color = if (status.totalPnl >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C))
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
-                    Text("Posiciones abiertas: ${status.openPositions}/${status.maxPositions}  PNL Total: \$${"%.2f".format(status.totalPnl)}",
-                        style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.7f))
-                }
 
-                if (positions.isEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
-                } else {
-                    positions.forEach { pos -> PositionCard(pos, viewModel) }
+                    if (positions.isEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
+                    } else {
+                        positions.forEach { pos -> PositionCard(pos, viewModel) }
+                    }
                 }
             }
         }
@@ -405,6 +421,45 @@ private fun BotSection(
 
 @Composable
 private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
+    val isClosed = pos.status == "closed"
+    val isSpot = pos.bot_type == "spot"
+    val showConfirmDialog = remember { mutableStateOf(false) }
+
+    if (showConfirmDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog.value = false },
+            containerColor = Surface,
+            title = { Text("Cerrar posicion", fontWeight = FontWeight.Bold, color = Secondary) },
+            text = {
+                Text(
+                    "Vender ${pos.asset} al precio actual y cerrar la operacion?",
+                    color = Secondary.copy(alpha = 0.8f)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmDialog.value = false
+                        viewModel.closePosition(pos.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C), contentColor = Color.White),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text("Cerrar", style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showConfirmDialog.value = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Secondary.copy(alpha = 0.2f), contentColor = Secondary),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text("Cancelar", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        )
+    }
+
     val typeLabel = when (pos.bot_type) {
         "spot" -> "SPOT"
         "futures" -> if (pos.strategy_type == "long") "LONG" else "SHORT"
@@ -427,9 +482,12 @@ private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
         else -> if (isLong) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
     }
     val pnlColor = if (pos.pnl >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+    val statusLabel = if (isClosed) "Cerrada" else "Abierta"
+    val statusColor = if (isClosed) Color(0xFFB71C1C) else Color(0xFF1B5E20)
+    val statusBg = if (isClosed) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         colors = CardDefaults.cardColors(containerColor = Primary),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -444,40 +502,114 @@ private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
                 }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(pos.asset, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.width(6.dp))
+                Card(colors = CardDefaults.cardColors(containerColor = statusBg), shape = RoundedCornerShape(6.dp)) {
+                    Text(statusLabel, color = statusColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 Text("\$${"%.2f".format(pos.pnl)} (${"%.2f".format(pos.pnl_percent)}%)",
                     color = pnlColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                if (isClosed) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = { viewModel.dismissPosition(pos.id) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color(0xFFB71C1C), modifier = Modifier.height(18.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Puntaje: ${"%.0f".format(pos.score)}/10", style = MaterialTheme.typography.bodySmall, color = Secondary)
+                Spacer(modifier = Modifier.width(10.dp))
+                Text("Confianza: ${"%.0f".format(pos.confidence)}/10", style = MaterialTheme.typography.bodySmall, color = Secondary)
+                Spacer(modifier = Modifier.weight(1f))
+                if (pos.usd_amount != null && pos.usd_amount > 0) {
+                    Text("Apostado: \$${"%.2f".format(pos.usd_amount)}", style = MaterialTheme.typography.bodySmall, color = BittickColor, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
             Row {
                 Text("Entrada: \$${"%.2f".format(pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Actual: \$${"%.2f".format(pos.current_price ?: pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
+                val priceLabel = if (isClosed) "Cerrada" else "Actual"
+                Text("$priceLabel: \$${"%.2f".format(pos.current_price ?: pos.entry_price)}", style = MaterialTheme.typography.bodySmall, color = Secondary)
             }
 
-            if (pos.target != null || pos.stop_loss != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(2.dp))
+            if (pos.target != null) {
                 Row {
-                    if (pos.target != null) {
-                        Text("Objetivo: \$${"%.2f".format(pos.target)}", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.6f))
-                    }
-                    if (pos.stop_loss != null) {
-                        Text("  Stop: \$${"%.2f".format(pos.stop_loss)}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFB71C1C).copy(alpha = 0.6f))
+                    Text("Objetivo: \$${"%.2f".format(pos.target)}", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.6f))
+                    if (isClosed && pos.close_reason != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val reasonText = when (pos.close_reason) {
+                            "take profit" -> "Objetivo alcanzado"
+                            "stop loss" -> "Stop loss alcanzado"
+                            "manual" -> "Cerrada manualmente a \$${"%.2f".format(pos.current_price ?: pos.entry_price)}"
+                            else -> ""
+                        }
+                        if (reasonText.isNotEmpty()) {
+                            Text(reasonText, style = MaterialTheme.typography.bodySmall, color = if (pos.close_reason == "manual") BittickColor else Color(0xFF1B5E20), fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-            Button(
-                onClick = { viewModel.cancelPosition(pos.id) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C), contentColor = Color.White),
-                shape = RoundedCornerShape(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.height(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("CANCELAR OPERACION", style = MaterialTheme.typography.labelSmall)
+            if (isSpot && !isClosed) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text("No stop en spot. Cerrar la posicion manualmente.",
+                    style = MaterialTheme.typography.bodySmall, color = Color(0xFFF57C00).copy(alpha = 0.8f))
+            } else if (!isSpot && pos.stop_loss != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text("Stop: \$${"%.2f".format(pos.stop_loss)}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFB71C1C).copy(alpha = 0.6f))
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (pos.opened_at != null) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(containerColor = Secondary.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                            Text("Orden iniciada", style = MaterialTheme.typography.labelSmall, color = Secondary.copy(alpha = 0.5f), fontWeight = FontWeight.Medium)
+                            Text(formatDateTimeLocal(pos.opened_at), style = MaterialTheme.typography.labelSmall, color = Secondary)
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                if (isClosed && pos.closed_at != null) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(containerColor = Secondary.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                            Text("Orden terminada", style = MaterialTheme.typography.labelSmall, color = Secondary.copy(alpha = 0.5f), fontWeight = FontWeight.Medium)
+                            Text(formatDateTimeLocal(pos.closed_at), style = MaterialTheme.typography.labelSmall, color = Secondary)
+                        }
+                    }
+                }
+            }
+
+            if (!isClosed) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Button(
+                    onClick = { showConfirmDialog.value = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C), contentColor = Color.White),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("CERRAR POSICION", style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }
@@ -511,6 +643,15 @@ private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(op.asset, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.width(6.dp))
+                val semaforoColor = when {
+                    minOf(op.score, op.confidence) >= 8 -> Color(0xFF4CAF50)
+                    minOf(op.score, op.confidence) >= 7 || op.score == op.confidence -> Color(0xFFFFC107)
+                    else -> Color(0xFFE53935)
+                }
+                Canvas(modifier = Modifier.size(10.dp)) {
+                    drawCircle(color = semaforoColor)
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 Text("\$${op.price}", fontWeight = FontWeight.Bold, color = Secondary)
                 Spacer(modifier = Modifier.width(4.dp))
@@ -555,9 +696,21 @@ private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit)
     }
 }
 
+private fun parseToInstant(dateStr: String): java.time.Instant? {
+    return try {
+        java.time.Instant.parse(dateStr)
+    } catch (_: Exception) {
+        try {
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            java.time.LocalDateTime.parse(dateStr, formatter)
+                .toInstant(java.time.ZoneOffset.UTC)
+        } catch (_: Exception) { null }
+    }
+}
+
 private fun formatDateTimeLocal(isoDate: String): String {
     return try {
-        val instant = java.time.Instant.parse(isoDate)
+        val instant = parseToInstant(isoDate) ?: return isoDate
         val local = instant.atZone(java.time.ZoneId.systemDefault())
         local.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm:ss"))
     } catch (_: Exception) { isoDate }
@@ -565,7 +718,7 @@ private fun formatDateTimeLocal(isoDate: String): String {
 
 private fun formatDayOfWeekSpanish(isoDate: String): String {
     return try {
-        val instant = java.time.Instant.parse(isoDate)
+        val instant = parseToInstant(isoDate) ?: return isoDate
         val zdt = instant.atZone(java.time.ZoneId.systemDefault())
         val today = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
         if (zdt.toLocalDate() == today) return "hoy"

@@ -43,7 +43,8 @@ data class TradingUiState(
     val error: String? = null,
     val chartStatus: String = "iniciando...",
     val isPremium: Boolean = false,
-    val isFreeTier: Boolean = false
+    val isFreeTier: Boolean = false,
+    val botNumber: Int = 0
 )
 
 data class TradingOpportunityItem(
@@ -170,6 +171,22 @@ class TradingViewModel @Inject constructor(
                     }
                 }
             }
+            val botStatusResponse = api.getTradingBotStatus(walletAddress = addr)
+            if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
+                val botStatusData = botStatusResponse.parsedBody<BotStatusResponse>()?.data
+                _state.value = _state.value.copy(
+                    spotBotStatus = botStatusData?.spot ?: _state.value.spotBotStatus,
+                    futuresBotStatus = botStatusData?.futures ?: _state.value.futuresBotStatus
+                )
+            }
+            val posResponse = api.getTradingPositions(walletAddress = addr)
+            if (posResponse.isSuccessful || posResponse.code() == 300) {
+                val allPositions = posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()
+                _state.value = _state.value.copy(
+                    spotPositions = allPositions.filter { it.bot_type == "spot" } + _state.value.spotPositions.filter { it.status == "closed" }.take(5),
+                    futuresPositions = allPositions.filter { it.bot_type == "futures" } + _state.value.futuresPositions.filter { it.status == "closed" }.take(5)
+                )
+            }
         } catch (_: Exception) { }
     }
 
@@ -189,6 +206,7 @@ class TradingViewModel @Inject constructor(
                 val addr = getWalletAddress()
                 val oppResponse = api.getTradingOpportunities(walletAddress = addr)
                 val posResponse = api.getTradingPositions(walletAddress = addr)
+                val closedPosResponse = api.getTradingPositions(walletAddress = addr, status = "closed")
                 val botStatusResponse = api.getTradingBotStatus(walletAddress = addr)
 
                 val isFreeTier = oppResponse.code() == 300
@@ -200,8 +218,15 @@ class TradingViewModel @Inject constructor(
                 val allPositions = if (posResponse.isSuccessful || posResponse.code() == 300) {
                     posResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()
                 } else emptyList()
+
+                val allClosedPositions = if (closedPosResponse.isSuccessful || closedPosResponse.code() == 300) {
+                    closedPosResponse.parsedBody<PositionsResponse>()?.data ?: emptyList()
+                } else emptyList()
+
                 val spotPos = allPositions.filter { it.bot_type == "spot" }
                 val futuresPos = allPositions.filter { it.bot_type == "futures" }
+                val spotClosed = allClosedPositions.filter { it.bot_type == "spot" }.take(5)
+                val futuresClosed = allClosedPositions.filter { it.bot_type == "futures" }.take(5)
 
                 val botStatusData = if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
                     botStatusResponse.parsedBody<BotStatusResponse>()?.data
@@ -209,18 +234,21 @@ class TradingViewModel @Inject constructor(
                 val spotStatus = botStatusData?.spot
                 val futuresStatus = botStatusData?.futures
 
-                Log.d("TradingVM", "loadAll() addr=$addr | oppCode=${oppResponse.code()} | posCode=${posResponse.code()} | botCode=${botStatusResponse.code()}")
-                Log.d("TradingVM", "loadAll() spotPos=${spotPos.size} futuresPos=${futuresPos.size} | spotEnabled=${spotStatus?.enabled} futuresEnabled=${futuresStatus?.enabled} | isFreeTier=$isFreeTier")
+                Log.d("TradingVM", "loadAll() addr=$addr | oppCode=${oppResponse.code()} | posCode=${posResponse.code()} | closedCode=${closedPosResponse.code()} | botCode=${botStatusResponse.code()}")
+                Log.d("TradingVM", "loadAll() spotPos=${spotPos.size} futuresPos=${futuresPos.size} spotClosed=${spotClosed.size} futuresClosed=${futuresClosed.size} | spotEnabled=${spotStatus?.enabled} futuresEnabled=${futuresStatus?.enabled} | isFreeTier=$isFreeTier")
+
+                val botNum = prefs.getBotNumber() ?: 0
 
                 _state.value = _state.value.copy(
                     opportunities = opportunities,
-                    spotPositions = spotPos,
-                    futuresPositions = futuresPos,
+                    spotPositions = spotPos + spotClosed,
+                    futuresPositions = futuresPos + futuresClosed,
                     spotBotStatus = spotStatus,
                     futuresBotStatus = futuresStatus,
                     isLoading = false,
                     isFreeTier = isFreeTier,
-                    isPremium = !isFreeTier && addr != null
+                    isPremium = !isFreeTier && addr != null,
+                    botNumber = botNum
                 )
                 updateLastCreatedAt(opportunities)
                 if (!isFreeTier) {
@@ -315,17 +343,54 @@ class TradingViewModel @Inject constructor(
         }
     }
 
-    fun cancelPosition(positionId: Int) {
+    fun closePosition(positionId: Int) {
         viewModelScope.launch {
             try {
                 val response = api.cancelTradingPosition(positionId)
                 if (response.isSuccessful) {
-                    loadAll()
+                    val body = response.body()?.data
+                    val closedAt = java.time.Instant.now().toString()
+                    val closedPnl = try {
+                        val obj = org.json.JSONObject(body.toString())
+                        Pair(obj.optDouble("pnl", 0.0), obj.optDouble("pnl_percent", 0.0))
+                    } catch (_: Exception) { Pair(0.0, 0.0) }
+                    val closedPrice = try {
+                        org.json.JSONObject(body.toString()).optDouble("current_price", 0.0)
+                    } catch (_: Exception) { null }
+                    _state.value = _state.value.copy(
+                        spotPositions = _state.value.spotPositions.map {
+                            if (it.id == positionId) it.copy(
+                                status = "closed",
+                                closed_at = closedAt,
+                                current_price = closedPrice ?: it.current_price,
+                                pnl = closedPnl.first,
+                                pnl_percent = closedPnl.second,
+                                close_reason = "manual"
+                            ) else it
+                        },
+                        futuresPositions = _state.value.futuresPositions.map {
+                            if (it.id == positionId) it.copy(
+                                status = "closed",
+                                closed_at = closedAt,
+                                current_price = closedPrice ?: it.current_price,
+                                pnl = closedPnl.first,
+                                pnl_percent = closedPnl.second,
+                                close_reason = "manual"
+                            ) else it
+                        }
+                    )
                 }
             } catch (e: Exception) {
-                _state.value = _state.value.copy(error = e.message ?: "Error al cancelar")
+                _state.value = _state.value.copy(error = e.message ?: "Error al cerrar posicion")
             }
         }
+    }
+
+    fun dismissPosition(positionId: Int) {
+        _state.value = _state.value.copy(
+            spotPositions = _state.value.spotPositions.filter { it.id != positionId },
+            futuresPositions = _state.value.futuresPositions.filter { it.id != positionId }
+        )
     }
 
     fun deleteOpportunity(opportunityId: Int) {
