@@ -110,6 +110,18 @@ fun CandleChartView(
             )
 
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+            setOnTouchListener { v, event ->
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN ->
+                        v.parent.requestDisallowInterceptTouchEvent(true)
+                    android.view.MotionEvent.ACTION_UP,
+                    android.view.MotionEvent.ACTION_CANCEL ->
+                        v.parent.requestDisallowInterceptTouchEvent(false)
+                }
+                false
+            }
+
             loadUrl("file:///android_asset/chart.html")
         }
     }
