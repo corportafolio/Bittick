@@ -10,6 +10,7 @@ import com.bittick.network.ApiService
 import com.bittick.network.BotPosition
 import com.bittick.network.BotStatusItem
 import com.bittick.network.ChartZone
+import com.bittick.network.TradingZone
 import com.bittick.network.Kline
 import com.bittick.network.TradingOpportunity
 import com.bittick.network.TradingOpportunitiesResponse
@@ -36,6 +37,7 @@ data class TradingUiState(
     val futuresBotStatus: BotStatusItem? = null,
     val klines: List<Kline> = emptyList(),
     val zones: List<ChartZone> = emptyList(),
+    val tradingZones: List<TradingZone> = emptyList(),
     val chartInterval: String = "1h",
     val currentPrice: Double? = null,
     val isLoading: Boolean = false,
@@ -44,7 +46,8 @@ data class TradingUiState(
     val chartStatus: String = "iniciando...",
     val isPremium: Boolean = false,
     val isFreeTier: Boolean = false,
-    val botNumber: Int = 0
+    val botNumber: Int = 0,
+    val chartExpanded: Boolean = false
 )
 
 data class TradingOpportunityItem(
@@ -74,7 +77,6 @@ class TradingViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(TradingUiState())
     val state: StateFlow<TradingUiState> = _state
-    private val announcedOpportunityIds = mutableSetOf<Int>()
     private var pollingJob: Job? = null
     private var klinesPollingJob: Job? = null
     private var tickerPollingJob: Job? = null
@@ -99,7 +101,6 @@ class TradingViewModel @Inject constructor(
         stopPolling()
         stopKlinesPolling()
         stopTickerPolling()
-        notifier.destroy()
     }
 
     private fun startPolling() {
@@ -165,13 +166,11 @@ class TradingViewModel @Inject constructor(
                             opportunities = (trulyNew + _state.value.opportunities).sortedByDescending { it.id }
                         )
                         updateLastCreatedAt(trulyNew)
-                        if (!_state.value.isFreeTier) {
-                            announceOpportunities(trulyNew)
-                        }
                     }
                 }
             }
-            val botStatusResponse = api.getTradingBotStatus(walletAddress = addr)
+            val inscriptionId = prefs.getSelectedInscriptionId()
+            val botStatusResponse = api.getTradingBotStatus(walletAddress = addr, inscriptionId = inscriptionId)
             if (botStatusResponse.isSuccessful || botStatusResponse.code() == 300) {
                 val botStatusData = botStatusResponse.parsedBody<BotStatusResponse>()?.data
                 _state.value = _state.value.copy(
@@ -207,7 +206,9 @@ class TradingViewModel @Inject constructor(
                 val oppResponse = api.getTradingOpportunities(walletAddress = addr)
                 val posResponse = api.getTradingPositions(walletAddress = addr)
                 val closedPosResponse = api.getTradingPositions(walletAddress = addr, status = "closed")
-                val botStatusResponse = api.getTradingBotStatus(walletAddress = addr)
+                val inscriptionId = prefs.getSelectedInscriptionId()
+                val botStatusResponse = api.getTradingBotStatus(walletAddress = addr, inscriptionId = inscriptionId)
+                val tickerResponse = api.getTicker()
 
                 val isFreeTier = oppResponse.code() == 300
 
@@ -234,6 +235,10 @@ class TradingViewModel @Inject constructor(
                 val spotStatus = botStatusData?.spot
                 val futuresStatus = botStatusData?.futures
 
+                val currentPrice = if (tickerResponse.isSuccessful && tickerResponse.body()?.exito == true) {
+                    tickerResponse.body()!!.data?.price
+                } else null
+
                 Log.d("TradingVM", "loadAll() addr=$addr | oppCode=${oppResponse.code()} | posCode=${posResponse.code()} | closedCode=${closedPosResponse.code()} | botCode=${botStatusResponse.code()}")
                 Log.d("TradingVM", "loadAll() spotPos=${spotPos.size} futuresPos=${futuresPos.size} spotClosed=${spotClosed.size} futuresClosed=${futuresClosed.size} | spotEnabled=${spotStatus?.enabled} futuresEnabled=${futuresStatus?.enabled} | isFreeTier=$isFreeTier")
 
@@ -248,12 +253,12 @@ class TradingViewModel @Inject constructor(
                     isLoading = false,
                     isFreeTier = isFreeTier,
                     isPremium = !isFreeTier && addr != null,
-                    botNumber = botNum
+                    botNumber = botNum,
+                    currentPrice = currentPrice
                 )
                 updateLastCreatedAt(opportunities)
-                if (!isFreeTier) {
-                    announceOpportunities(opportunities)
-                }
+
+                loadTradingZones()
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Error de conexion")
             }
@@ -285,7 +290,7 @@ class TradingViewModel @Inject constructor(
                         chartLoading = false,
                         chartStatus = "${klines.size} velas recibidas"
                     )
-                    loadZones(interval, klines)
+                    loadAutoZones(interval)
                 } else {
                     Log.w("TradingVM", "loadKlines HTTP ${response.code()}: ${response.message()}")
                     val errBody = response.errorBody()?.string()
@@ -308,27 +313,40 @@ class TradingViewModel @Inject constructor(
     fun changeChartInterval(interval: String) {
         if (interval != _state.value.chartInterval) {
             startKlinesPolling(interval)
+            viewModelScope.launch { loadTradingZones() }
         }
     }
 
-    private suspend fun loadZones(interval: String, klines: List<Kline>) {
+    fun toggleChartExpanded() {
+        _state.value = _state.value.copy(chartExpanded = !_state.value.chartExpanded)
+    }
+
+    private suspend fun loadAutoZones(interval: String) {
         try {
             _state.value = _state.value.copy(chartStatus = "cargando zonas...")
             val response = api.getZones(interval = interval, limit = 500)
             if (response.isSuccessful && response.body()?.exito == true) {
                 val zones = response.body()!!.data?.zones ?: emptyList()
-                val status = if (zones.isNotEmpty()) {
-                    "${klines.size} velas, ${zones.size} zonas OK"
-                } else {
-                    "${klines.size} velas (sin zonas)"
-                }
-                _state.value = _state.value.copy(zones = zones, chartStatus = status)
-            } else {
-                _state.value = _state.value.copy(chartStatus = "${klines.size} velas (zonas error)")
+                _state.value = _state.value.copy(zones = zones)
             }
         } catch (e: Exception) {
-            Log.e("TradingVM", "loadZones error", e)
-            _state.value = _state.value.copy(chartStatus = "${klines.size} velas (zonas error: ${e.localizedMessage})")
+            Log.e("TradingVM", "loadAutoZones error", e)
+        }
+    }
+
+    private suspend fun loadTradingZones() {
+        try {
+            val price = _state.value.currentPrice
+            val tzResponse = api.getTradingZones(price = price)
+            if (tzResponse.isSuccessful && tzResponse.body()?.exito == true) {
+                val tz = tzResponse.body()!!.data ?: emptyList()
+                _state.value = _state.value.copy(
+                    tradingZones = tz,
+                    chartStatus = "${_state.value.klines.size} velas, ${_state.value.zones.size} zonas auto, ${tz.size} zonas TA"
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("TradingVM", "loadTradingZones error", e)
         }
     }
 
@@ -404,31 +422,6 @@ class TradingViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message ?: "Error al eliminar oportunidad")
-            }
-        }
-    }
-
-    private fun announceOpportunities(opportunities: List<TradingOpportunityItem>) {
-        val toAnnounce = opportunities.filter { opp ->
-            opp.score >= 6 && opp.confidence >= 6 && opp.id !in announcedOpportunityIds
-        }
-        if (toAnnounce.isEmpty()) return
-        viewModelScope.launch {
-            for (opp in toAnnounce) {
-                announcedOpportunityIds.add(opp.id)
-                notifier.notifyTradingOpportunityByScore(
-                    asset = opp.asset,
-                    type = opp.type,
-                    price = opp.price,
-                    score = opp.score,
-                    confidence = opp.confidence,
-                    entryZone = opp.entryZone,
-                    target = opp.target,
-                    stopLoss = opp.stopLoss,
-                    explanation = opp.explanation,
-                    opportunityId = opp.id
-                )
-                delay(3000)
             }
         }
     }

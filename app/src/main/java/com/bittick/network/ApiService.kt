@@ -33,7 +33,8 @@ interface ApiService {
 
     @GET("api/trading/bot/status")
     suspend fun getTradingBotStatus(
-        @Header("x-wallet-address") walletAddress: String? = null
+        @Header("x-wallet-address") walletAddress: String? = null,
+        @Query("inscriptionId") inscriptionId: String? = null
     ): Response<BotStatusResponse>
 
     @GET("api/chart/klines")
@@ -50,6 +51,11 @@ interface ApiService {
         @Query("interval") interval: String = "1h",
         @Query("limit") limit: Int = 200
     ): Response<ZonesResponse>
+
+    @GET("api/chart/trading-zones")
+    suspend fun getTradingZones(
+        @Query("price") price: Double? = null
+    ): Response<TradingZonesResponse>
 
     // Auth
     @GET("api/auth/nonce")
@@ -93,10 +99,43 @@ interface ApiService {
     suspend fun saveInscriptionPreferences(
         @Body body: SavePreferencesRequest
     ): Response<SavePreferencesResponse>
+
+    // Level configs per bot
+    @GET("api/trading/strategies/levels/{inscriptionId}/{mode}")
+    suspend fun getLevelConfigs(
+        @Path("inscriptionId") inscriptionId: String,
+        @Path("mode") mode: String
+    ): Response<LevelConfigsResponse>
+
+    @POST("api/trading/strategies/levels")
+    suspend fun saveLevelConfigs(
+        @Body body: LevelConfigsRequest
+    ): Response<SaveLevelConfigsResponse>
+
+    // Bot API Key (per-bot per-mode Binance credentials)
+    @GET("api/trading/bot-apikey/{inscriptionId}/{mode}/raw")
+    suspend fun getBotApiKey(
+        @Header("x-wallet-address") walletAddress: String,
+        @Path("inscriptionId") inscriptionId: String,
+        @Path("mode") mode: String
+    ): Response<BotApiKeyResponse>
+
+    @POST("api/trading/bot-apikey")
+    suspend fun saveBotApiKey(
+        @Header("x-wallet-address") walletAddress: String,
+        @Body body: BotApiKeyRequest
+    ): Response<SaveBotApiKeyResponse>
+
+    @DELETE("api/trading/bot-apikey/{inscriptionId}/{mode}")
+    suspend fun deleteBotApiKey(
+        @Header("x-wallet-address") walletAddress: String,
+        @Path("inscriptionId") inscriptionId: String,
+        @Path("mode") mode: String
+    ): Response<DeleteBotApiKeyResponse>
 }
 
 object ApiClient {
-    const val BASE_URL = "http://localhost:4001/"
+    const val BASE_URL = "https://bittick.net/"
     private const val TIMEOUT = 30L
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
