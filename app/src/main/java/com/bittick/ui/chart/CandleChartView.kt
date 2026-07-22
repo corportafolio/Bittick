@@ -7,8 +7,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.bittick.network.ChartZone
 import com.bittick.network.Kline
+import com.bittick.network.TradingZone
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -34,12 +35,15 @@ class ChartPendingState {
     var pageLoaded = false
     var pendingData: String? = null
     var pendingZones: String? = null
+    var pendingTradingZones: String? = null
 }
 
 @Composable
 fun CandleChartView(
     klines: List<Kline>,
     zones: List<ChartZone> = emptyList(),
+    tradingZones: List<TradingZone> = emptyList(),
+    zonesVisible: Boolean = true,
     modifier: Modifier = Modifier,
     onChartLog: (String) -> Unit = {}
 ) {
@@ -72,6 +76,11 @@ fun CandleChartView(
                         view?.evaluateJavascript(it, null)
                         pending.pendingZones = null
                         Log.d(TAG, "enviando zonas pendientes")
+                    }
+                    pending.pendingTradingZones?.let {
+                        view?.evaluateJavascript(it, null)
+                        pending.pendingTradingZones = null
+                        Log.d(TAG, "enviando trading zones pendientes")
                     }
                 }
                 override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, url: String?) {
@@ -151,9 +160,22 @@ fun CandleChartView(
         }
     }
 
+    LaunchedEffect(webView, tradingZones, klines, zonesVisible) {
+        if (!pending.pageLoaded) return@LaunchedEffect
+        if (!zonesVisible || tradingZones.isEmpty() || klines.isEmpty()) {
+            webView.evaluateJavascript("clearTradingZones()") {}
+            return@LaunchedEffect
+        }
+        Log.d(TAG, "Enviando ${tradingZones.size} trading zones al grafico")
+        val js = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { generateTradingZonesData(tradingZones, klines) }
+        webView.evaluateJavascript(js) { result ->
+            Log.d(TAG, "setTradingZones result: $result")
+        }
+    }
+
     AndroidView(
         factory = { webView },
-        modifier = modifier.fillMaxWidth().height(320.dp)
+        modifier = modifier.fillMaxSize()
     )
 }
 
@@ -196,4 +218,18 @@ internal fun generateZonesData(zones: List<ChartZone>, klines: List<Kline>): Str
     }
 
     return "setZones($zonesJson, $klinesJson)"
+}
+
+internal fun generateTradingZonesData(tradingZones: List<TradingZone>, klines: List<Kline>): String {
+    val tzJson = JSONArray()
+    for (tz in tradingZones) {
+        tzJson.put(JSONObject().apply {
+            put("date", tz.date)
+            put("type", tz.type)
+            put("startPrice", tz.start_price)
+            put("endPrice", tz.end_price)
+            put("color", tz.color)
+        })
+    }
+    return "setTradingZones($tzJson)"
 }

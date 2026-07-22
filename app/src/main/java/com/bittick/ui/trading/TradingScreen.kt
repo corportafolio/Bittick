@@ -31,10 +31,15 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -120,16 +125,6 @@ fun TradingScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Secondary) },
-                    label = { Text("Trading", color = OnPrimary) },
-                    selected = true,
-                    onClick = { scope.launch { drawerState.close() } },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Primary,
-                        unselectedContainerColor = Color.Transparent
-                    )
-                )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = Secondary) },
                     label = { Text("Ajustes", color = OnPrimary) },
@@ -256,10 +251,10 @@ fun TradingScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(if (state.isFreeTier) 120.dp else 300.dp)
+                                            .height(if (state.chartExpanded) 600.dp else if (state.isFreeTier) 120.dp else 300.dp)
                                     ) {
                                         if (!state.isFreeTier) {
-                                            CandleChartView(klines = state.klines, zones = state.zones)
+                                            CandleChartView(klines = state.klines, zones = state.zones, tradingZones = state.tradingZones, zonesVisible = state.zonesVisible)
                                             if (state.chartLoading) {
                                                 Box(
                                                     modifier = Modifier.matchParentSize(),
@@ -290,12 +285,34 @@ fun TradingScreen(
                                         else Secondary.copy(alpha = 0.6f)
                                     )
                                     state.currentPrice?.let { price ->
-                                        Text(
-                                            "BTC/USDT \$${"%.2f".format(price)}",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = BittickColor,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "BTC/USDT \$${"%.2f".format(price)}",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = BittickColor,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(onClick = { viewModel.toggleChartExpanded() }) {
+                                                Icon(
+                                                    imageVector = if (state.chartExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                                    contentDescription = if (state.chartExpanded) "Colapsar grafico" else "Expandir grafico",
+                                                    tint = BittickColor,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                            IconButton(onClick = { viewModel.toggleZonesVisible() }) {
+                                                Icon(
+                                                    imageVector = if (state.zonesVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                    contentDescription = if (state.zonesVisible) "Ocultar zonas" else "Mostrar zonas",
+                                                    tint = BittickColor,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -374,6 +391,28 @@ private fun BotSection(
                 Text(if (enabled) "ACTIVO" else "INACTIVO",
                     color = if (enabled) Color(0xFF1B5E20) else Color(0xFFB71C1C),
                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+            }
+
+            if (status != null && !status.hasApiKey) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1A00)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Configura tu API Key de Binance para activar los bots automaticos",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFFA000)
+                        )
+                    }
+                }
             }
 
             if (status != null) {

@@ -47,7 +47,8 @@ data class TradingUiState(
     val isPremium: Boolean = false,
     val isFreeTier: Boolean = false,
     val botNumber: Int = 0,
-    val chartExpanded: Boolean = false
+    val chartExpanded: Boolean = false,
+    val zonesVisible: Boolean = true
 )
 
 data class TradingOpportunityItem(
@@ -319,6 +320,10 @@ class TradingViewModel @Inject constructor(
 
     fun toggleChartExpanded() {
         _state.value = _state.value.copy(chartExpanded = !_state.value.chartExpanded)
+    }
+
+    fun toggleZonesVisible() {
+        _state.value = _state.value.copy(zonesVisible = !_state.value.zonesVisible)
     }
 
     private suspend fun loadAutoZones(interval: String) {
