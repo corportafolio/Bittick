@@ -127,7 +127,16 @@ class SettingsViewModel @Inject constructor(
             walletAddress = address,
             isPremium = isPremium,
             botNumber = botNumber,
-            botImageUrl = session?.botImageBase64?.takeIf { it.isNotBlank() }
+            botImageUrl = session?.botImageBase64?.takeIf { it.isNotBlank() },
+            selectedInscription = inscriptionId?.let {
+                com.bittick.network.InscriptionInfo(
+                    num = botNumber ?: 0,
+                    inscriptionId = it,
+                    tier = if (isPremium) "FOUNDER" else "STANDARD",
+                    botImageUrl = null,
+                    selected = true
+                )
+            }
         )
 
         if (inscriptionId != null) {
@@ -502,8 +511,16 @@ class SettingsViewModel @Inject constructor(
     fun updateAllFuturesSecret(value: String) { _state.value = _state.value.copy(allFuturesSecret = value) }
 
     fun saveAllApiKeys() {
-        val address = _state.value.walletAddress ?: return
-        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        val address = _state.value.walletAddress
+        if (address == null) {
+            _state.value = _state.value.copy(error = "No hay wallet conectada")
+            return
+        }
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId
+        if (inscriptionId == null) {
+            _state.value = _state.value.copy(error = "No hay inscripción seleccionada")
+            return
+        }
         val s = _state.value
 
         val spotKey = s.allSpotKey.ifBlank { null }
@@ -511,7 +528,10 @@ class SettingsViewModel @Inject constructor(
         val futuresKey = s.allFuturesKey.ifBlank { null }
         val futuresSecret = s.allFuturesSecret.ifBlank { null }
 
-        if (spotKey == null && spotSecret == null && futuresKey == null && futuresSecret == null) return
+        if (spotKey == null && spotSecret == null && futuresKey == null && futuresSecret == null) {
+            _state.value = _state.value.copy(error = "Completá al menos un par de API Key + Secret")
+            return
+        }
 
         _state.value = _state.value.copy(allApiKeysSaving = true)
         viewModelScope.launch {
