@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 import com.bittick.data.ai.NotificationHelper;
+import com.bittick.data.cache.BittickImageCache;
 import com.bittick.data.preferences.BittickPreferences;
 import com.bittick.di.AppModule_ProvideApiServiceFactory;
 import com.bittick.network.ApiService;
@@ -16,6 +17,9 @@ import com.bittick.ui.settings.SettingsViewModel;
 import com.bittick.ui.settings.SettingsViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.bittick.ui.trading.TradingViewModel;
 import com.bittick.ui.trading.TradingViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.bittick.wallet.WalletSessionManager;
+import com.bittick.wallet.WalletViewModel;
+import com.bittick.wallet.WalletViewModel_HiltModules_KeyModule_ProvideFactory;
 import dagger.hilt.android.ActivityRetainedLifecycle;
 import dagger.hilt.android.ViewModelLifecycle;
 import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
@@ -364,6 +368,7 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
 
     @Override
     public void injectMainActivity(MainActivity arg0) {
+      injectMainActivity2(arg0);
     }
 
     @Override
@@ -373,7 +378,7 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
 
     @Override
     public Set<String> getViewModelKeys() {
-      return SetBuilder.<String>newSetBuilder(2).add(SettingsViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(TradingViewModel_HiltModules_KeyModule_ProvideFactory.provide()).build();
+      return SetBuilder.<String>newSetBuilder(3).add(SettingsViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(TradingViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(WalletViewModel_HiltModules_KeyModule_ProvideFactory.provide()).build();
     }
 
     @Override
@@ -390,6 +395,11 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
     public ViewComponentBuilder viewComponentBuilder() {
       return new ViewCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl);
     }
+
+    private MainActivity injectMainActivity2(MainActivity instance) {
+      MainActivity_MembersInjector.injectPreferences(instance, singletonCImpl.bittickPreferencesProvider.get());
+      return instance;
+    }
   }
 
   private static final class ViewModelCImpl extends BittickApplication_HiltComponents.ViewModelC {
@@ -402,6 +412,8 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
     private Provider<SettingsViewModel> settingsViewModelProvider;
 
     private Provider<TradingViewModel> tradingViewModelProvider;
+
+    private Provider<WalletViewModel> walletViewModelProvider;
 
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
         ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
@@ -418,11 +430,12 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
         final ViewModelLifecycle viewModelLifecycleParam) {
       this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
       this.tradingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
+      this.walletViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
     }
 
     @Override
     public Map<String, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(2).put("com.bittick.ui.settings.SettingsViewModel", ((Provider) settingsViewModelProvider)).put("com.bittick.ui.trading.TradingViewModel", ((Provider) tradingViewModelProvider)).build();
+      return MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(3).put("com.bittick.ui.settings.SettingsViewModel", ((Provider) settingsViewModelProvider)).put("com.bittick.ui.trading.TradingViewModel", ((Provider) tradingViewModelProvider)).put("com.bittick.wallet.WalletViewModel", ((Provider) walletViewModelProvider)).build();
     }
 
     @Override
@@ -452,10 +465,13 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
       public T get() {
         switch (id) {
           case 0: // com.bittick.ui.settings.SettingsViewModel 
-          return (T) new SettingsViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideApiServiceProvider.get());
+          return (T) new SettingsViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.bittickPreferencesProvider.get(), singletonCImpl.bittickImageCacheProvider.get());
 
           case 1: // com.bittick.ui.trading.TradingViewModel 
           return (T) new TradingViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.notificationHelperProvider.get(), singletonCImpl.bittickPreferencesProvider.get());
+
+          case 2: // com.bittick.wallet.WalletViewModel 
+          return (T) new WalletViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.bittickImageCacheProvider.get(), singletonCImpl.bittickPreferencesProvider.get(), singletonCImpl.walletSessionManagerProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -550,11 +566,15 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
 
     private final SingletonCImpl singletonCImpl = this;
 
+    private Provider<BittickPreferences> bittickPreferencesProvider;
+
+    private Provider<BittickImageCache> bittickImageCacheProvider;
+
     private Provider<ApiService> provideApiServiceProvider;
 
     private Provider<NotificationHelper> notificationHelperProvider;
 
-    private Provider<BittickPreferences> bittickPreferencesProvider;
+    private Provider<WalletSessionManager> walletSessionManagerProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -564,13 +584,15 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
 
     @SuppressWarnings("unchecked")
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
-      this.provideApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<ApiService>(singletonCImpl, 0));
-      this.notificationHelperProvider = DoubleCheck.provider(new SwitchingProvider<NotificationHelper>(singletonCImpl, 1));
-      this.bittickPreferencesProvider = DoubleCheck.provider(new SwitchingProvider<BittickPreferences>(singletonCImpl, 2));
+      this.bittickPreferencesProvider = DoubleCheck.provider(new SwitchingProvider<BittickPreferences>(singletonCImpl, 0));
+      this.bittickImageCacheProvider = DoubleCheck.provider(new SwitchingProvider<BittickImageCache>(singletonCImpl, 1));
+      this.provideApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<ApiService>(singletonCImpl, 2));
+      this.notificationHelperProvider = DoubleCheck.provider(new SwitchingProvider<NotificationHelper>(singletonCImpl, 3));
+      this.walletSessionManagerProvider = DoubleCheck.provider(new SwitchingProvider<WalletSessionManager>(singletonCImpl, 4));
     }
 
     @Override
-    public void injectBittickApplication(BittickApplication arg0) {
+    public void injectBittickApplication(BittickApplication bittickApplication) {
     }
 
     @Override
@@ -602,14 +624,20 @@ public final class DaggerBittickApplication_HiltComponents_SingletonC {
       @Override
       public T get() {
         switch (id) {
-          case 0: // com.bittick.network.ApiService 
+          case 0: // com.bittick.data.preferences.BittickPreferences 
+          return (T) new BittickPreferences(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 1: // com.bittick.data.cache.BittickImageCache 
+          return (T) new BittickImageCache(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 2: // com.bittick.network.ApiService 
           return (T) AppModule_ProvideApiServiceFactory.provideApiService();
 
-          case 1: // com.bittick.data.ai.NotificationHelper 
+          case 3: // com.bittick.data.ai.NotificationHelper 
           return (T) new NotificationHelper(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 2: // com.bittick.data.preferences.BittickPreferences 
-          return (T) new BittickPreferences(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+          case 4: // com.bittick.wallet.WalletSessionManager 
+          return (T) new WalletSessionManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.bittickPreferencesProvider.get(), singletonCImpl.provideApiServiceProvider.get());
 
           default: throw new AssertionError(id);
         }

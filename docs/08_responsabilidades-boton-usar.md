@@ -158,7 +158,7 @@ preferences.updateSelectedInscription(
 
 **Qué actualiza:**
 - `selected_inscription_id` → ID de la inscripción
-- `bot_number` → Número del bot (#88)
+- `bot_number` → Número del bot (#88) ← **SE GUARDA AQUÍ**
 - `is_premium` → `true` si tier es FOUNDER
 - `wallet_session` JSON → Actualiza el objeto completo con el nuevo bot
 
@@ -264,12 +264,17 @@ Cuando `refreshTrigger` cambia (de 0 a 1, de 1 a 2, etc.), Compose relanza el ef
 ```kotlin
 // TradingScreen.kt
 if (!state.isFreeTier) {  // isFreeTier = oppResponse.code() == 300
-    BotSection("SPOT", state.spotBotStatus, state.spotPositions)
-    BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions)
+    BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel, state.botNumber)
+    BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel, state.botNumber)
 }
 ```
 
 La sección de bots **solo se muestra** si `isFreeTier = false`, lo cual ocurre cuando el servidor retorna HTTP 200 para opportunities (wallet verificada con inscripción seleccionada).
+
+Dentro de `BotSection`, el título se renderiza como:
+```kotlin
+Text("BOT $botNumber $label BTC")  // Ej: "BOT 88 SPOT BTC"
+```
 
 ### 4.2 Lógica de ACTIVO vs INACTIVO
 
@@ -339,6 +344,75 @@ El mecanismo `refreshTrigger` es una solución al patrón de **ViewModel scoping
 | `WalletViewModel.kt` | `confirmSelection()` | ~318 | POST select-inscription + actualizar prefs |
 | `MainActivity.kt` | `onConfirmSelection` | ~84 | refreshTrigger++ + popBackStack |
 | `TradingScreen.kt` | `LaunchedEffect(refreshTrigger)` | ~104 | Llama loadAll() en ViewModel correcto |
-| `TradingViewModel.kt` | `loadAll()` | ~185 | Carga opportunities + positions + bot/status |
+| `TradingViewModel.kt` | `loadAll()` | ~185 | Carga opportunities + positions + bot/status + botNumber desde prefs |
 | `BittickPreferences.kt` | `updateSelectedInscription()` | ~194 | Guarda bot seleccionado en SharedPreferences |
+| `BittickPreferences.kt` | `setBotNumber()` | ~72 | Escribe `bot_number` en SharedPreferences |
+| `BittickPreferences.kt` | `getBotNumber()` | ~67 | Lee `bot_number` de SharedPreferences |
+| `TradingScreen.kt` | `BotSection()` | ~350 | Muestra "BOT $num $label BTC" con el número del bot |
 | `ApiService.kt` | `selectInscription()` | ~71 | Definición Retrofit del endpoint |
+
+---
+
+## 8. Bot Number — Cadena Completa USAR → TradingScreen
+
+### 8.1 Flujo del Número de Bot
+
+El número del bot se propaga desde que el usuario presiona USAR hasta que se renderiza en la pantalla de trading:
+
+```
+USAR presionado
+    │
+    ▼
+WalletViewModel.confirmSelection()
+    │  preview.num = 88
+    │
+    ▼
+preferences.updateSelectedInscription(selectedInscriptionId, botNumber=88, tier)
+    │
+    ├──▶ WalletSession.botNumber = 88  (JSON en prefs)
+    ├──▶ setBotNumber(88)              (KEY_BOT_NUMBER en prefs)
+    │
+    ▼
+tradingRefreshTrigger++
+    │
+    ▼
+TradingScreen: LaunchedEffect(refreshTrigger)
+    │
+    ▼
+TradingViewModel.loadAll()
+    │  val botNum = prefs.getBotNumber() ?: 0  // → 88
+    │
+    ▼
+_state.copy(botNumber = 88)
+    │
+    ▼
+BotSection("SPOT", ..., botNumber=88)
+    │
+    ▼
+Text("BOT 88 SPOT BTC")
+```
+
+### 8.2 Funciones Involucradas
+
+| Función | Archivo | Línea | Qué hace |
+|---------|---------|-------|----------|
+| `confirmSelection()` | `WalletViewModel.kt` | 318 | POST al server + llama `updateSelectedInscription()` |
+| `updateSelectedInscription()` | `BittickPreferences.kt` | 194 | Actualiza `WalletSession` + llama `setBotNumber()` |
+| `setBotNumber()` | `BittickPreferences.kt` | 72 | Escribe `KEY_BOT_NUMBER` en SharedPreferences |
+| `getBotNumber()` | `BittickPreferences.kt` | 67 | Lee `KEY_BOT_NUMBER` de SharedPreferences |
+| `loadAll()` | `TradingViewModel.kt` | 186 | Lee `getBotNumber()` y lo guarda en `TradingUiState.botNumber` |
+| `BotSection()` | `TradingScreen.kt` | 350 | Recibe `botNumber` y renderiza "BOT $num $label BTC" |
+
+### 8.3 Por qué es Necesario `botNumber` en TradingUiState
+
+El número del bot se usa para:
+1. **Identificación visual** — El usuario ve "BOT 88 SPOT BTC" en vez de solo "BOT SPOT BTC"
+2. **Múltiples bots** — Cada inscripción tiene un número único (1-100). Si el usuario cambia de bot, el número actualiza
+3. **Persistencia** — Si el usuario cierra y reabre la app, `loadAll()` lee el botNumber de SharedPreferences
+
+### 8.4 Independencia del Bot Number
+
+El `botNumber` es **solo visual**. El servidor identifica al usuario por la dirección de wallet (`x-wallet-address`), no por el número del bot. El número se usa para:
+- Mostrar en la UI qué bot está activo
+- Loggear en el server qué bot ejecutó cada operación (`bot_manager.js` línea ~63: `bot=${context.botNum || '?'}`)
+- El server usa `inscription_id` internamente, no `bot_num`

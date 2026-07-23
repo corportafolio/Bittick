@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.bittick.app-mergeDebugResources-52:/values-en-rIN/values-en-rIN.xml",
+            "outputFile": "com.bittick.app-mergeDebugResources-53:/values-en-rIN/values-en-rIN.xml",
             "map": [
                 {
                     "source": "/home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/res/values-en-rIN/values-en-rIN.xml",

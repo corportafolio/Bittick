@@ -4,6 +4,7 @@ import com.bittick.di.AppModule;
 import com.bittick.service.BittickForegroundService_GeneratedInjector;
 import com.bittick.ui.settings.SettingsViewModel_HiltModules;
 import com.bittick.ui.trading.TradingViewModel_HiltModules;
+import com.bittick.wallet.WalletViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -161,7 +162,8 @@ public final class BittickApplication_HiltComponents {
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
           SettingsViewModel_HiltModules.KeyModule.class,
-          TradingViewModel_HiltModules.KeyModule.class
+          TradingViewModel_HiltModules.KeyModule.class,
+          WalletViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -199,7 +201,8 @@ public final class BittickApplication_HiltComponents {
       modules = {
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           SettingsViewModel_HiltModules.BindsModule.class,
-          TradingViewModel_HiltModules.BindsModule.class
+          TradingViewModel_HiltModules.BindsModule.class,
+          WalletViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

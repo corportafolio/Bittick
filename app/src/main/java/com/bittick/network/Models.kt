@@ -15,6 +15,7 @@ data class TradingOpportunity(
     val id: Int,
     val asset: String,
     val strategy_type: String,
+    val bot_type: String = "futures",
     val price: Double,
     val entry_zone: String?,
     val target: Double?,
@@ -57,6 +58,7 @@ data class BotPosition(
 data class BotStatusItem(
     val type: String,
     val enabled: Boolean,
+    val hasApiKey: Boolean = false,
     val maxPositions: Int,
     val positionSizeUsdt: Double,
     val minConfidence: Int,
@@ -101,6 +103,16 @@ data class ChartZone(
     val zoneType: String,
     val type: String,
     val label: String
+)
+
+data class TradingZonesResponse(val exito: Boolean, val data: List<TradingZone>?)
+data class TradingZone(
+    val id: Int,
+    val date: String,
+    val type: String,
+    val start_price: Double,
+    val end_price: Double,
+    val color: String
 )
 
 // Wallet & Auth
@@ -204,3 +216,30 @@ data class SavePreferencesRequest(
 )
 
 data class SavePreferencesResponse(val exito: Boolean, val message: String?)
+
+// Level configs per bot
+data class LevelConfig(
+    val level: Int,
+    val enabled: Boolean = true,
+    val position_size_usdt: Double = 10.0,
+    val min_score: Int = 6,
+    val min_confidence: Int = 6,
+    val leverage: Int = 1
+)
+
+data class LevelConfigsResponse(val exito: Boolean, val data: List<LevelConfig>?)
+
+data class LevelConfigsRequest(
+    val inscription_id: String,
+    val mode: String,
+    val levels: List<LevelConfig>
+)
+
+data class SaveLevelConfigsResponse(val exito: Boolean, val data: Any?)
+
+// Bot API Key
+data class BotApiKeyData(val api_key: String, val api_secret: String, val has_key: Boolean)
+data class BotApiKeyResponse(val exito: Boolean, val data: BotApiKeyData?)
+data class BotApiKeyRequest(val inscription_id: String, val mode: String, val api_key: String, val api_secret: String)
+data class SaveBotApiKeyResponse(val exito: Boolean, val message: String?)
+data class DeleteBotApiKeyResponse(val exito: Boolean, val message: String?)

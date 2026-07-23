@@ -51,6 +51,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -319,8 +320,8 @@ fun TradingScreen(
                         }
 
                         if (!state.isFreeTier) {
-                            item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel, state.botNumber) }
-                            item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel, state.botNumber) }
+                            item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, state.spotOpportunities, viewModel, state.botNumber) }
+                            item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, state.futuresOpportunities, viewModel, state.botNumber) }
                         }
 
                         state.error?.let { err ->
@@ -331,30 +332,6 @@ fun TradingScreen(
                                 ) {
                                     Text(err, color = Color(0xFFB71C1C), modifier = Modifier.padding(12.dp))
                                 }
-                            }
-                        }
-
-                        item {
-                            Text(
-                                "Oportunidades detectadas",
-                                fontWeight = FontWeight.Bold,
-                                color = Secondary,
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                        }
-
-                        if (state.opportunities.isEmpty()) {
-                            item {
-                                Text(
-                                    "No hay oportunidades aun.",
-                                    color = Secondary.copy(alpha = 0.6f),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
-                            }
-                        } else {
-                            items(state.opportunities, key = { it.id }) { op ->
-                                OpportunityCard(op, onDelete = { viewModel.deleteOpportunity(it) })
                             }
                         }
                     }
@@ -369,6 +346,7 @@ private fun BotSection(
     label: String,
     status: BotStatusItem?,
     positions: List<BotPosition>,
+    opportunities: List<TradingOpportunityItem>,
     viewModel: TradingViewModel,
     botNumber: Int = 0
 ) {
@@ -453,6 +431,22 @@ private fun BotSection(
                         Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
                     } else {
                         positions.forEach { pos -> PositionCard(pos, viewModel) }
+                    }
+
+                    if (opportunities.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Secondary.copy(alpha = 0.15f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Oportunidades ${label}",
+                            fontWeight = FontWeight.Bold,
+                            color = Secondary,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        opportunities.forEach { op ->
+                            OpportunityCard(op, onDelete = { viewModel.deleteOpportunity(op.id) })
+                        }
                     }
                 }
             }

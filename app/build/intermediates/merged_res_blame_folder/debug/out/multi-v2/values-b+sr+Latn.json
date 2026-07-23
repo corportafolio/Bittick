@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.bittick.app-mergeDebugResources-52:/values-b+sr+Latn/values-b+sr+Latn.xml",
+            "outputFile": "com.bittick.app-mergeDebugResources-53:/values-b+sr+Latn/values-b+sr+Latn.xml",
             "map": [
                 {
                     "source": "/home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/res/values-b+sr+Latn/values-b+sr+Latn.xml",

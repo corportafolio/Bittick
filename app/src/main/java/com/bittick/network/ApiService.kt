@@ -15,7 +15,8 @@ interface ApiService {
         @Header("x-wallet-address") walletAddress: String? = null,
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0,
-        @Query("since") since: String? = null
+        @Query("since") since: String? = null,
+        @Query("bot_type") botType: String? = null
     ): Response<TradingOpportunitiesResponse>
 
     @DELETE("api/trading/opportunities/{id}")

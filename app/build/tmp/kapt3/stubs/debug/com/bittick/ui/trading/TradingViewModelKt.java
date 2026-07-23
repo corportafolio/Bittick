@@ -9,6 +9,7 @@ import com.bittick.network.ApiService;
 import com.bittick.network.BotPosition;
 import com.bittick.network.BotStatusItem;
 import com.bittick.network.ChartZone;
+import com.bittick.network.TradingZone;
 import com.bittick.network.Kline;
 import com.bittick.network.TradingOpportunity;
 import com.bittick.network.TradingOpportunitiesResponse;

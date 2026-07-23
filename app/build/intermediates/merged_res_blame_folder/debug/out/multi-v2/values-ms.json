@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.bittick.app-mergeDebugResources-52:/values-ms/values-ms.xml",
+            "outputFile": "com.bittick.app-mergeDebugResources-53:/values-ms/values-ms.xml",
             "map": [
                 {
                     "source": "/home/candela/.gradle/caches/transforms-3/da00c743c40d53d70be8a64beacd0555/transformed/ui-release/res/values-ms/values-ms.xml",

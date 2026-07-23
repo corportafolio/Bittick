@@ -30,7 +30,8 @@ import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 data class TradingUiState(
-    val opportunities: List<TradingOpportunityItem> = emptyList(),
+    val spotOpportunities: List<TradingOpportunityItem> = emptyList(),
+    val futuresOpportunities: List<TradingOpportunityItem> = emptyList(),
     val spotPositions: List<BotPosition> = emptyList(),
     val futuresPositions: List<BotPosition> = emptyList(),
     val spotBotStatus: BotStatusItem? = null,
@@ -54,6 +55,7 @@ data class TradingUiState(
 data class TradingOpportunityItem(
     val id: Int,
     val type: String,
+    val botType: String,
     val asset: String,
     val price: String,
     val entryZone: String,
@@ -152,19 +154,33 @@ class TradingViewModel @Inject constructor(
     private suspend fun fetchNewOpportunities() {
         try {
             val addr = getWalletAddress()
-            val since = if (_state.value.opportunities.isEmpty()) null else lastCreatedAt
-            val response = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = since)
-            if (response.isSuccessful || response.code() == 300) {
-                val isFreeTier = response.code() == 300
+            val spotSince = if (_state.value.spotOpportunities.isEmpty()) null else lastCreatedAt
+            val futuresSince = if (_state.value.futuresOpportunities.isEmpty()) null else lastCreatedAt
+            val spotResponse = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = spotSince, botType = "spot")
+            val futuresResponse = api.getTradingOpportunities(walletAddress = addr, limit = 50, offset = 0, since = futuresSince, botType = "futures")
+            if (spotResponse.isSuccessful || spotResponse.code() == 300) {
+                val isFreeTier = spotResponse.code() == 300
                 _state.value = _state.value.copy(isFreeTier = isFreeTier)
-                val allItems = response.parsedBody<TradingOpportunitiesResponse>()?.data?.map { it.toItem() } ?: emptyList()
-                val newItems = allItems.filter { it.score >= 5 && it.confidence >= 5 }
-                if (newItems.isNotEmpty()) {
-                    val existingIds = _state.value.opportunities.map { it.id }.toSet()
-                    val trulyNew = newItems.filter { it.id !in existingIds }
+                val spotItems = spotResponse.parsedBody<TradingOpportunitiesResponse>()?.data?.map { it.toItem() }?.filter { it.score >= 5 && it.confidence >= 5 } ?: emptyList()
+                if (spotItems.isNotEmpty()) {
+                    val existingIds = _state.value.spotOpportunities.map { it.id }.toSet()
+                    val trulyNew = spotItems.filter { it.id !in existingIds }
                     if (trulyNew.isNotEmpty()) {
                         _state.value = _state.value.copy(
-                            opportunities = (trulyNew + _state.value.opportunities).sortedByDescending { it.id }
+                            spotOpportunities = (trulyNew + _state.value.spotOpportunities).sortedByDescending { it.id }
+                        )
+                        updateLastCreatedAt(trulyNew)
+                    }
+                }
+            }
+            if (futuresResponse.isSuccessful || futuresResponse.code() == 300) {
+                val futuresItems = futuresResponse.parsedBody<TradingOpportunitiesResponse>()?.data?.map { it.toItem() }?.filter { it.score >= 5 && it.confidence >= 5 } ?: emptyList()
+                if (futuresItems.isNotEmpty()) {
+                    val existingIds = _state.value.futuresOpportunities.map { it.id }.toSet()
+                    val trulyNew = futuresItems.filter { it.id !in existingIds }
+                    if (trulyNew.isNotEmpty()) {
+                        _state.value = _state.value.copy(
+                            futuresOpportunities = (trulyNew + _state.value.futuresOpportunities).sortedByDescending { it.id }
                         )
                         updateLastCreatedAt(trulyNew)
                     }
@@ -204,17 +220,22 @@ class TradingViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val addr = getWalletAddress()
-                val oppResponse = api.getTradingOpportunities(walletAddress = addr)
+                val spotOppResponse = api.getTradingOpportunities(walletAddress = addr, botType = "spot")
+                val futuresOppResponse = api.getTradingOpportunities(walletAddress = addr, botType = "futures")
                 val posResponse = api.getTradingPositions(walletAddress = addr)
                 val closedPosResponse = api.getTradingPositions(walletAddress = addr, status = "closed")
                 val inscriptionId = prefs.getSelectedInscriptionId()
                 val botStatusResponse = api.getTradingBotStatus(walletAddress = addr, inscriptionId = inscriptionId)
                 val tickerResponse = api.getTicker()
 
-                val isFreeTier = oppResponse.code() == 300
+                val isFreeTier = spotOppResponse.code() == 300
 
-                val opportunities = if (oppResponse.isSuccessful || isFreeTier) {
-                    (oppResponse.parsedBody<TradingOpportunitiesResponse>()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
+                val spotOpps = if (spotOppResponse.isSuccessful || isFreeTier) {
+                    (spotOppResponse.parsedBody<TradingOpportunitiesResponse>()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
+                } else emptyList()
+
+                val futuresOpps = if (futuresOppResponse.isSuccessful || isFreeTier) {
+                    (futuresOppResponse.parsedBody<TradingOpportunitiesResponse>()?.data ?: emptyList()).map { it.toItem() }.filter { it.score >= 5 && it.confidence >= 5 }
                 } else emptyList()
 
                 val allPositions = if (posResponse.isSuccessful || posResponse.code() == 300) {
@@ -240,13 +261,14 @@ class TradingViewModel @Inject constructor(
                     tickerResponse.body()!!.data?.price
                 } else null
 
-                Log.d("TradingVM", "loadAll() addr=$addr | oppCode=${oppResponse.code()} | posCode=${posResponse.code()} | closedCode=${closedPosResponse.code()} | botCode=${botStatusResponse.code()}")
-                Log.d("TradingVM", "loadAll() spotPos=${spotPos.size} futuresPos=${futuresPos.size} spotClosed=${spotClosed.size} futuresClosed=${futuresClosed.size} | spotEnabled=${spotStatus?.enabled} futuresEnabled=${futuresStatus?.enabled} | isFreeTier=$isFreeTier")
+                Log.d("TradingVM", "loadAll() addr=$addr | spotOpps=${spotOpps.size} futuresOpps=${futuresOpps.size} | spotPos=${spotPos.size} futuresPos=${futuresPos.size}")
+                Log.d("TradingVM", "loadAll() spotEnabled=${spotStatus?.enabled} futuresEnabled=${futuresStatus?.enabled} | isFreeTier=$isFreeTier")
 
                 val botNum = prefs.getBotNumber() ?: 0
 
                 _state.value = _state.value.copy(
-                    opportunities = opportunities,
+                    spotOpportunities = spotOpps,
+                    futuresOpportunities = futuresOpps,
                     spotPositions = spotPos + spotClosed,
                     futuresPositions = futuresPos + futuresClosed,
                     spotBotStatus = spotStatus,
@@ -257,7 +279,7 @@ class TradingViewModel @Inject constructor(
                     botNumber = botNum,
                     currentPrice = currentPrice
                 )
-                updateLastCreatedAt(opportunities)
+                updateLastCreatedAt(spotOpps + futuresOpps)
 
                 loadTradingZones()
             } catch (e: Exception) {
@@ -422,7 +444,8 @@ class TradingViewModel @Inject constructor(
                 val response = api.deleteTradingOpportunity(opportunityId)
                 if (response.isSuccessful && response.body()?.exito == true) {
                     _state.value = _state.value.copy(
-                        opportunities = _state.value.opportunities.filter { it.id != opportunityId }
+                        spotOpportunities = _state.value.spotOpportunities.filter { it.id != opportunityId },
+                        futuresOpportunities = _state.value.futuresOpportunities.filter { it.id != opportunityId }
                     )
                 }
             } catch (e: Exception) {
@@ -446,7 +469,7 @@ fun TradingOpportunity.toItem(): TradingOpportunityItem {
         map?.mapValues { it.value.toString() } ?: emptyMap()
     } catch (_: Exception) { emptyMap() }
     return TradingOpportunityItem(
-        id = id, type = strategy_type, asset = asset,
+        id = id, type = strategy_type, botType = bot_type, asset = asset,
         price = "%.2f".format(price),
         entryZone = entry_zone ?: "-",
         target = target?.let { "%.2f".format(it) } ?: "-",

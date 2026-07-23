@@ -65,7 +65,6 @@ class BittickForegroundService : Service() {
         tradingPollingJob = null
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
-        notifier.destroy()
         scope.cancel()
         super.onDestroy()
     }

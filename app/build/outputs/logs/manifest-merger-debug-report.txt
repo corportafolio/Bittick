@@ -12,28 +12,29 @@ MERGED from [androidx.navigation:navigation-runtime:2.7.7] /home/candela/.gradle
 MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /home/candela/.gradle/caches/transforms-3/01d56ec9cb73fbfcbe81da800893d3f8/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /home/candela/.gradle/caches/transforms-3/fcf6800e917d95681e4eed8b74ca9a10/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.navigation:navigation-compose:2.7.7] /home/candela/.gradle/caches/transforms-3/109402998e54170865b661ce00747594/transformed/navigation-compose-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/41d2796cae14baeaf9b2fd6bdefdb671/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/candela/.gradle/caches/transforms-3/7c55f5b0244e3190daf8f13655662eb9/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/candela/.gradle/caches/transforms-3/3ee40e7fb0b99124513a19222cb17033/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/8d64dc6fb166465befd651e46b88daa6/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d236e26917018a64a4626827273dcebe/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/dfba13cea57b819ab2f46c926db171bc/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6cba0ca019a55d7e36aa92fe5f12f14b/transformed/animation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/candela/.gradle/caches/transforms-3/a873f9c7db5dd667d9ed7ab28511bcbe/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6d16d90a678735c35f1cc19aaf79eea5/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d3306f1da1540b8c68c196659fbccacf/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/candela/.gradle/caches/transforms-3/f8380d8f64cd14a4d48ea31f5e316568/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/candela/.gradle/caches/transforms-3/b32f71088924567bd332c5293f533098/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/candela/.gradle/caches/transforms-3/29c82e02377fc97a45b70f04585778ff/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:17:1-28:12
 MERGED from [com.google.dagger:hilt-android:2.50] /home/candela/.gradle/caches/transforms-3/b6669a78c911804390a8c2d4100519a1/transformed/hilt-android-2.50/AndroidManifest.xml:16:1-19:12
 MERGED from [androidx.fragment:fragment:1.5.1] /home/candela/.gradle/caches/transforms-3/3791f9dbcb8cf1ca2757982dc243e36a/transformed/fragment-1.5.1/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.activity:activity:1.8.2] /home/candela/.gradle/caches/transforms-3/8e52de636282a35df04b309e664cd5b3/transformed/activity-1.8.2/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.activity:activity-ktx:1.8.2] /home/candela/.gradle/caches/transforms-3/fe507f8d6a0fecbfe21c8048787b098f/transformed/activity-ktx-1.8.2/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.activity:activity-compose:1.8.2] /home/candela/.gradle/caches/transforms-3/406534ad6690e05794d0940185cf1ba9/transformed/activity-compose-1.8.2/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/candela/.gradle/caches/transforms-3/0729f83be2a54cfdcf10b7236fe1d9dc/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.savedstate:savedstate:1.2.1] /home/candela/.gradle/caches/transforms-3/b01bf10d6c3a24e6db60beabb9acca25/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.loader:loader:1.0.0] /home/candela/.gradle/caches/transforms-3/16651e4d9fd4fd3118803e74b54edbc1/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/41d2796cae14baeaf9b2fd6bdefdb671/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/candela/.gradle/caches/transforms-3/7c55f5b0244e3190daf8f13655662eb9/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/candela/.gradle/caches/transforms-3/3ee40e7fb0b99124513a19222cb17033/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/dfba13cea57b819ab2f46c926db171bc/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6cba0ca019a55d7e36aa92fe5f12f14b/transformed/animation-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d236e26917018a64a4626827273dcebe/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/8d64dc6fb166465befd651e46b88daa6/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/candela/.gradle/caches/transforms-3/a873f9c7db5dd667d9ed7ab28511bcbe/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6d16d90a678735c35f1cc19aaf79eea5/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d3306f1da1540b8c68c196659fbccacf/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/candela/.gradle/caches/transforms-3/b32f71088924567bd332c5293f533098/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/candela/.gradle/caches/transforms-3/29c82e02377fc97a45b70f04585778ff/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/candela/.gradle/caches/transforms-3/f8380d8f64cd14a4d48ea31f5e316568/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.emoji2:emoji2:1.3.0] /home/candela/.gradle/caches/transforms-3/c133450b59b87be1f2a333a03764185a/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/candela/.gradle/caches/transforms-3/33048126ea9e264a8b734980aa43980d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /home/candela/.gradle/caches/transforms-3/f2b0e115b20b1449e994f1553e990bb4/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
@@ -98,6 +99,8 @@ ADDED from /home/candela/AndroidStudioProjects/bittick/app/src/main/AndroidManif
 application
 ADDED from /home/candela/AndroidStudioProjects/bittick/app/src/main/AndroidManifest.xml:11:5-44:19
 INJECTED from /home/candela/AndroidStudioProjects/bittick/app/src/main/AndroidManifest.xml:11:5-44:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] /home/candela/.gradle/caches/transforms-3/c133450b59b87be1f2a333a03764185a/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] /home/candela/.gradle/caches/transforms-3/c133450b59b87be1f2a333a03764185a/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/candela/.gradle/caches/transforms-3/33048126ea9e264a8b734980aa43980d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
@@ -196,6 +199,36 @@ MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /home/candela/.gr
 MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /home/candela/.gradle/caches/transforms-3/fcf6800e917d95681e4eed8b74ca9a10/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:5:5-44
 MERGED from [androidx.navigation:navigation-compose:2.7.7] /home/candela/.gradle/caches/transforms-3/109402998e54170865b661ce00747594/transformed/navigation-compose-2.7.7/AndroidManifest.xml:5:5-44
 MERGED from [androidx.navigation:navigation-compose:2.7.7] /home/candela/.gradle/caches/transforms-3/109402998e54170865b661ce00747594/transformed/navigation-compose-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/41d2796cae14baeaf9b2fd6bdefdb671/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/41d2796cae14baeaf9b2fd6bdefdb671/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/candela/.gradle/caches/transforms-3/7c55f5b0244e3190daf8f13655662eb9/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/candela/.gradle/caches/transforms-3/7c55f5b0244e3190daf8f13655662eb9/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/candela/.gradle/caches/transforms-3/3ee40e7fb0b99124513a19222cb17033/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/candela/.gradle/caches/transforms-3/3ee40e7fb0b99124513a19222cb17033/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/8d64dc6fb166465befd651e46b88daa6/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/8d64dc6fb166465befd651e46b88daa6/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d236e26917018a64a4626827273dcebe/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d236e26917018a64a4626827273dcebe/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/dfba13cea57b819ab2f46c926db171bc/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/dfba13cea57b819ab2f46c926db171bc/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6cba0ca019a55d7e36aa92fe5f12f14b/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6cba0ca019a55d7e36aa92fe5f12f14b/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/candela/.gradle/caches/transforms-3/a873f9c7db5dd667d9ed7ab28511bcbe/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/candela/.gradle/caches/transforms-3/a873f9c7db5dd667d9ed7ab28511bcbe/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6d16d90a678735c35f1cc19aaf79eea5/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6d16d90a678735c35f1cc19aaf79eea5/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d3306f1da1540b8c68c196659fbccacf/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d3306f1da1540b8c68c196659fbccacf/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/candela/.gradle/caches/transforms-3/f8380d8f64cd14a4d48ea31f5e316568/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/candela/.gradle/caches/transforms-3/f8380d8f64cd14a4d48ea31f5e316568/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/candela/.gradle/caches/transforms-3/b32f71088924567bd332c5293f533098/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/candela/.gradle/caches/transforms-3/b32f71088924567bd332c5293f533098/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/candela/.gradle/caches/transforms-3/29c82e02377fc97a45b70f04585778ff/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/candela/.gradle/caches/transforms-3/29c82e02377fc97a45b70f04585778ff/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:20:5-44
 MERGED from [com.google.dagger:hilt-android:2.50] /home/candela/.gradle/caches/transforms-3/b6669a78c911804390a8c2d4100519a1/transformed/hilt-android-2.50/AndroidManifest.xml:18:3-42
 MERGED from [com.google.dagger:hilt-android:2.50] /home/candela/.gradle/caches/transforms-3/b6669a78c911804390a8c2d4100519a1/transformed/hilt-android-2.50/AndroidManifest.xml:18:3-42
 MERGED from [androidx.fragment:fragment:1.5.1] /home/candela/.gradle/caches/transforms-3/3791f9dbcb8cf1ca2757982dc243e36a/transformed/fragment-1.5.1/AndroidManifest.xml:20:5-22:41
@@ -204,8 +237,6 @@ MERGED from [androidx.activity:activity:1.8.2] /home/candela/.gradle/caches/tran
 MERGED from [androidx.activity:activity:1.8.2] /home/candela/.gradle/caches/transforms-3/8e52de636282a35df04b309e664cd5b3/transformed/activity-1.8.2/AndroidManifest.xml:20:5-44
 MERGED from [androidx.activity:activity-ktx:1.8.2] /home/candela/.gradle/caches/transforms-3/fe507f8d6a0fecbfe21c8048787b098f/transformed/activity-ktx-1.8.2/AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity-ktx:1.8.2] /home/candela/.gradle/caches/transforms-3/fe507f8d6a0fecbfe21c8048787b098f/transformed/activity-ktx-1.8.2/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/candela/.gradle/caches/transforms-3/65303ce5818ee18dbe1119763aab5db2/transformed/material3-release/AndroidManifest.xml:20:5-44
 MERGED from [androidx.activity:activity-compose:1.8.2] /home/candela/.gradle/caches/transforms-3/406534ad6690e05794d0940185cf1ba9/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity-compose:1.8.2] /home/candela/.gradle/caches/transforms-3/406534ad6690e05794d0940185cf1ba9/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
 MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/candela/.gradle/caches/transforms-3/0729f83be2a54cfdcf10b7236fe1d9dc/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
@@ -214,32 +245,6 @@ MERGED from [androidx.savedstate:savedstate:1.2.1] /home/candela/.gradle/caches/
 MERGED from [androidx.savedstate:savedstate:1.2.1] /home/candela/.gradle/caches/transforms-3/b01bf10d6c3a24e6db60beabb9acca25/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
 MERGED from [androidx.loader:loader:1.0.0] /home/candela/.gradle/caches/transforms-3/16651e4d9fd4fd3118803e74b54edbc1/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.loader:loader:1.0.0] /home/candela/.gradle/caches/transforms-3/16651e4d9fd4fd3118803e74b54edbc1/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/41d2796cae14baeaf9b2fd6bdefdb671/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/41d2796cae14baeaf9b2fd6bdefdb671/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/candela/.gradle/caches/transforms-3/7c55f5b0244e3190daf8f13655662eb9/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/candela/.gradle/caches/transforms-3/7c55f5b0244e3190daf8f13655662eb9/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/candela/.gradle/caches/transforms-3/3ee40e7fb0b99124513a19222cb17033/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/candela/.gradle/caches/transforms-3/3ee40e7fb0b99124513a19222cb17033/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/dfba13cea57b819ab2f46c926db171bc/transformed/animation-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/candela/.gradle/caches/transforms-3/dfba13cea57b819ab2f46c926db171bc/transformed/animation-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6cba0ca019a55d7e36aa92fe5f12f14b/transformed/animation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6cba0ca019a55d7e36aa92fe5f12f14b/transformed/animation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d236e26917018a64a4626827273dcebe/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d236e26917018a64a4626827273dcebe/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/8d64dc6fb166465befd651e46b88daa6/transformed/foundation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/candela/.gradle/caches/transforms-3/8d64dc6fb166465befd651e46b88daa6/transformed/foundation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/candela/.gradle/caches/transforms-3/a873f9c7db5dd667d9ed7ab28511bcbe/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/candela/.gradle/caches/transforms-3/a873f9c7db5dd667d9ed7ab28511bcbe/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6d16d90a678735c35f1cc19aaf79eea5/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/candela/.gradle/caches/transforms-3/6d16d90a678735c35f1cc19aaf79eea5/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d3306f1da1540b8c68c196659fbccacf/transformed/ui-util-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/candela/.gradle/caches/transforms-3/d3306f1da1540b8c68c196659fbccacf/transformed/ui-util-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/candela/.gradle/caches/transforms-3/b32f71088924567bd332c5293f533098/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/candela/.gradle/caches/transforms-3/b32f71088924567bd332c5293f533098/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/candela/.gradle/caches/transforms-3/29c82e02377fc97a45b70f04585778ff/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/candela/.gradle/caches/transforms-3/29c82e02377fc97a45b70f04585778ff/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/candela/.gradle/caches/transforms-3/f8380d8f64cd14a4d48ea31f5e316568/transformed/ui-text-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/candela/.gradle/caches/transforms-3/f8380d8f64cd14a4d48ea31f5e316568/transformed/ui-text-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.emoji2:emoji2:1.3.0] /home/candela/.gradle/caches/transforms-3/c133450b59b87be1f2a333a03764185a/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.emoji2:emoji2:1.3.0] /home/candela/.gradle/caches/transforms-3/c133450b59b87be1f2a333a03764185a/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/candela/.gradle/caches/transforms-3/33048126ea9e264a8b734980aa43980d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
@@ -302,6 +307,12 @@ MERGED from [com.google.dagger:dagger-lint-aar:2.50] /home/candela/.gradle/cache
 		INJECTED from /home/candela/AndroidStudioProjects/bittick/app/src/main/AndroidManifest.xml
 	android:minSdkVersion
 		INJECTED from /home/candela/AndroidStudioProjects/bittick/app/src/main/AndroidManifest.xml
+activity#androidx.activity.ComponentActivity
+ADDED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.6.1] /home/candela/.gradle/caches/transforms-3/3b18a2af1ae4f18878aa4fa0dc24dc47/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:24:13-63
 provider#androidx.startup.InitializationProvider
 ADDED from [androidx.emoji2:emoji2:1.3.0] /home/candela/.gradle/caches/transforms-3/c133450b59b87be1f2a333a03764185a/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/candela/.gradle/caches/transforms-3/33048126ea9e264a8b734980aa43980d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20

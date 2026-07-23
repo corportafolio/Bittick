@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable;
 import androidx.compose.ui.Modifier;
 import com.bittick.network.ChartZone;
 import com.bittick.network.Kline;
+import com.bittick.network.TradingZone;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

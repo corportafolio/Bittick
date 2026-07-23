@@ -38,8 +38,31 @@ data class SettingsUiState(
     val futuresMaxPositions: Int = 5,
     val spotMinScore: Int = 6,
     val futuresMinScore: Int = 7,
+    val spotLevels: List<com.bittick.network.LevelConfig> = defaultLevels(),
+    val futuresLevels: List<com.bittick.network.LevelConfig> = defaultLevels(),
+    val spotExpanded: Boolean = false,
+    val futuresExpanded: Boolean = false,
+    val spotApiKeyMasked: String? = null,
+    val spotApiKeyHasKey: Boolean = false,
+    val spotApiKeyEditing: Boolean = false,
+    val spotApiKeyInput: String = "",
+    val spotApiSecretInput: String = "",
+    val futuresApiKeyMasked: String? = null,
+    val futuresApiKeyHasKey: Boolean = false,
+    val futuresApiKeyEditing: Boolean = false,
+    val futuresApiKeyInput: String = "",
+    val futuresApiSecretInput: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val apiKeyMessage: String? = null
+)
+
+fun defaultLevels() = listOf(
+    com.bittick.network.LevelConfig(10, true, 10.0, 10, 10, 3),
+    com.bittick.network.LevelConfig(9, true, 20.0, 9, 9, 3),
+    com.bittick.network.LevelConfig(8, true, 40.0, 8, 8, 3),
+    com.bittick.network.LevelConfig(7, true, 20.0, 7, 7, 2),
+    com.bittick.network.LevelConfig(6, true, 10.0, 6, 6, 1)
 )
 
 @HiltViewModel
@@ -104,6 +127,7 @@ class SettingsViewModel @Inject constructor(
         if (inscriptionId != null) {
             loadInscriptions(address)
             loadPreferences(inscriptionId)
+            loadLevelConfigs(inscriptionId)
         }
     }
 
@@ -152,6 +176,7 @@ class SettingsViewModel @Inject constructor(
                         botNumber = inscription.num
                     )
                     loadPreferences(inscription.inscriptionId)
+                    loadLevelConfigs(inscription.inscriptionId)
                 }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
@@ -250,6 +275,211 @@ class SettingsViewModel @Inject constructor(
     fun updateFuturesMinScore(score: Int) {
         _state.value = _state.value.copy(futuresMinScore = score)
         savePreferences()
+    }
+
+    fun toggleSpotExpanded() {
+        _state.value = _state.value.copy(spotExpanded = !_state.value.spotExpanded)
+    }
+
+    fun toggleFuturesExpanded() {
+        _state.value = _state.value.copy(futuresExpanded = !_state.value.futuresExpanded)
+    }
+
+    fun updateSpotLevel(level: Int, field: String, value: Any) {
+        val levels = _state.value.spotLevels.map {
+            if (it.level == level) {
+                when (field) {
+                    "enabled" -> it.copy(enabled = value as Boolean)
+                    "amount" -> it.copy(position_size_usdt = value as Double)
+                    "min_score" -> it.copy(min_score = value as Int)
+                    "min_confidence" -> it.copy(min_confidence = value as Int)
+                    "leverage" -> it.copy(leverage = value as Int)
+                    else -> it
+                }
+            } else it
+        }
+        _state.value = _state.value.copy(spotLevels = levels)
+    }
+
+    fun updateFuturesLevel(level: Int, field: String, value: Any) {
+        val levels = _state.value.futuresLevels.map {
+            if (it.level == level) {
+                when (field) {
+                    "enabled" -> it.copy(enabled = value as Boolean)
+                    "amount" -> it.copy(position_size_usdt = value as Double)
+                    "min_score" -> it.copy(min_score = value as Int)
+                    "min_confidence" -> it.copy(min_confidence = value as Int)
+                    "leverage" -> it.copy(leverage = value as Int)
+                    else -> it
+                }
+            } else it
+        }
+        _state.value = _state.value.copy(futuresLevels = levels)
+    }
+
+    fun saveLevelConfigs(mode: String) {
+        viewModelScope.launch {
+            val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return@launch
+            val levels = if (mode == "spot") _state.value.spotLevels else _state.value.futuresLevels
+            try {
+                val body = com.bittick.network.LevelConfigsRequest(
+                    inscription_id = inscriptionId,
+                    mode = mode,
+                    levels = levels
+                )
+                val response = ApiClient.apiService.saveLevelConfigs(body)
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    _state.value = _state.value.copy(error = null)
+                } else {
+                    _state.value = _state.value.copy(error = "Error guardando preferencias de $mode")
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = "Error guardando: ${e.message}")
+            }
+        }
+    }
+
+    private fun loadLevelConfigs(inscriptionId: String) {
+        viewModelScope.launch {
+            try {
+                val spotResponse = ApiClient.apiService.getLevelConfigs(inscriptionId, "spot")
+                if (spotResponse.isSuccessful && spotResponse.body()?.exito == true) {
+                    val data = spotResponse.body()?.data
+                    if (data != null && data.isNotEmpty()) {
+                        _state.value = _state.value.copy(spotLevels = data)
+                    }
+                }
+                val futuresResponse = ApiClient.apiService.getLevelConfigs(inscriptionId, "futures")
+                if (futuresResponse.isSuccessful && futuresResponse.body()?.exito == true) {
+                    val data = futuresResponse.body()?.data
+                    if (data != null && data.isNotEmpty()) {
+                        _state.value = _state.value.copy(futuresLevels = data)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        loadApiKey("spot")
+        loadApiKey("futures")
+    }
+
+    private fun loadApiKey(mode: String) {
+        val address = _state.value.walletAddress ?: return
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.apiService.getBotApiKey(address, inscriptionId, mode)
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    val data = response.body()?.data
+                    if (mode == "spot") {
+                        _state.value = _state.value.copy(
+                            spotApiKeyMasked = if (data?.has_key == true) data.api_key else null,
+                            spotApiKeyHasKey = data?.has_key == true,
+                            spotApiKeyEditing = false,
+                            spotApiKeyInput = "",
+                            spotApiSecretInput = ""
+                        )
+                    } else {
+                        _state.value = _state.value.copy(
+                            futuresApiKeyMasked = if (data?.has_key == true) data.api_key else null,
+                            futuresApiKeyHasKey = data?.has_key == true,
+                            futuresApiKeyEditing = false,
+                            futuresApiKeyInput = "",
+                            futuresApiSecretInput = ""
+                        )
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun toggleSpotApiKeyEditing() {
+        val s = _state.value
+        _state.value = s.copy(
+            spotApiKeyEditing = !s.spotApiKeyEditing,
+            spotApiKeyInput = "",
+            spotApiSecretInput = ""
+        )
+    }
+
+    fun toggleFuturesApiKeyEditing() {
+        val s = _state.value
+        _state.value = s.copy(
+            futuresApiKeyEditing = !s.futuresApiKeyEditing,
+            futuresApiKeyInput = "",
+            futuresApiSecretInput = ""
+        )
+    }
+
+    fun updateSpotApiKeyInput(value: String) {
+        _state.value = _state.value.copy(spotApiKeyInput = value)
+    }
+
+    fun updateSpotApiSecretInput(value: String) {
+        _state.value = _state.value.copy(spotApiSecretInput = value)
+    }
+
+    fun updateFuturesApiKeyInput(value: String) {
+        _state.value = _state.value.copy(futuresApiKeyInput = value)
+    }
+
+    fun updateFuturesApiSecretInput(value: String) {
+        _state.value = _state.value.copy(futuresApiSecretInput = value)
+    }
+
+    fun saveApiKey(mode: String) {
+        val address = _state.value.walletAddress ?: return
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        val apiKey = if (mode == "spot") _state.value.spotApiKeyInput else _state.value.futuresApiKeyInput
+        val apiSecret = if (mode == "spot") _state.value.spotApiSecretInput else _state.value.futuresApiSecretInput
+
+        if (apiKey.isBlank() || apiSecret.isBlank()) return
+
+        viewModelScope.launch {
+            try {
+                val body = com.bittick.network.BotApiKeyRequest(
+                    inscription_id = inscriptionId,
+                    mode = mode,
+                    api_key = apiKey,
+                    api_secret = apiSecret
+                )
+                val response = ApiClient.apiService.saveBotApiKey(address, body)
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    _state.value = _state.value.copy(apiKeyMessage = "API key guardada para $mode")
+                    loadApiKey(mode)
+                    if (mode == "spot" && !_state.value.spotEnabled) {
+                        _state.value = _state.value.copy(spotEnabled = true)
+                        savePreferences()
+                    } else if (mode == "futures" && !_state.value.futuresEnabled) {
+                        _state.value = _state.value.copy(futuresEnabled = true)
+                        savePreferences()
+                    }
+                } else {
+                    _state.value = _state.value.copy(error = "Error guardando API key")
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = "Error guardando API key: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteApiKey(mode: String) {
+        val address = _state.value.walletAddress ?: return
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.apiService.deleteBotApiKey(address, inscriptionId, mode)
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    _state.value = _state.value.copy(apiKeyMessage = "API key eliminada de $mode")
+                    loadApiKey(mode)
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = "Error eliminando API key: ${e.message}")
+            }
+        }
+    }
+
+    fun clearApiKeyMessage() {
+        _state.value = _state.value.copy(apiKeyMessage = null)
     }
 
     fun disconnectWallet() {
