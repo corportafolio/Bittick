@@ -224,6 +224,21 @@ fun TradingScreen(
                                     )
                                 }
                             }
+                            if (state.spotOpportunities.isEmpty() && state.futuresOpportunities.isEmpty()) {
+                                item {
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = "Por el momento no hay oportunidades disponibles para usuarios sin cuenta premium. Vuelva despues.",
+                                            color = Secondary.copy(alpha = 0.7f),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.padding(12.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                         item {
                             Card(
@@ -319,10 +334,8 @@ fun TradingScreen(
                             }
                         }
 
-                        if (!state.isFreeTier) {
-                            item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, state.spotOpportunities, viewModel, state.botNumber) }
-                            item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, state.futuresOpportunities, viewModel, state.botNumber) }
-                        }
+                        item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, state.spotOpportunities, viewModel, state.botNumber) }
+                        item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, state.futuresOpportunities, viewModel, state.botNumber) }
 
                         state.error?.let { err ->
                             item {
