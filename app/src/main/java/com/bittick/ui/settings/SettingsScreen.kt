@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -122,6 +123,31 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(12.dp)) }
 
+            // 2.5 API Keys — burbuja unificada
+            item {
+                AllApiKeysSection(
+                    spotHasKey = state.spotApiKeyHasKey,
+                    spotMasked = state.spotApiKeyMasked,
+                    futuresHasKey = state.futuresApiKeyHasKey,
+                    futuresMasked = state.futuresApiKeyMasked,
+                    editing = state.allApiKeysEditing,
+                    saving = state.allApiKeysSaving,
+                    spotKeyInput = state.allSpotKey,
+                    spotSecretInput = state.allSpotSecret,
+                    futuresKeyInput = state.allFuturesKey,
+                    futuresSecretInput = state.allFuturesSecret,
+                    onToggleEditing = viewModel::toggleAllApiKeysEditing,
+                    onSpotKeyChanged = viewModel::updateAllSpotKey,
+                    onSpotSecretChanged = viewModel::updateAllSpotSecret,
+                    onFuturesKeyChanged = viewModel::updateAllFuturesKey,
+                    onFuturesSecretChanged = viewModel::updateAllFuturesSecret,
+                    onSave = viewModel::saveAllApiKeys,
+                    onDeleteSpotKey = { viewModel.deleteApiKey("spot") },
+                    onDeleteFuturesKey = { viewModel.deleteApiKey("futures") }
+                )
+            }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+
             // 3. Configuración de Bots
             item {
                 BotCard(
@@ -130,20 +156,10 @@ fun SettingsScreen(
                     enabled = state.spotEnabled,
                     levels = state.spotLevels,
                     expanded = state.spotExpanded,
-                    apiKeyMasked = state.spotApiKeyMasked,
-                    apiKeyHasKey = state.spotApiKeyHasKey,
-                    apiKeyEditing = state.spotApiKeyEditing,
-                    apiKeyInput = state.spotApiKeyInput,
-                    apiSecretInput = state.spotApiSecretInput,
                     onToggleEnabled = viewModel::updateSpotEnabled,
                     onToggleExpanded = viewModel::toggleSpotExpanded,
                     onUpdateLevel = viewModel::updateSpotLevel,
-                    onSave = { viewModel.saveLevelConfigs("spot") },
-                    onToggleApiKeyEditing = viewModel::toggleSpotApiKeyEditing,
-                    onApiKeyInputChanged = viewModel::updateSpotApiKeyInput,
-                    onApiSecretInputChanged = viewModel::updateSpotApiSecretInput,
-                    onSaveApiKey = { viewModel.saveApiKey("spot") },
-                    onDeleteApiKey = { viewModel.deleteApiKey("spot") }
+                    onSave = { viewModel.saveLevelConfigs("spot") }
                 )
             }
             item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -154,20 +170,10 @@ fun SettingsScreen(
                     enabled = state.futuresEnabled,
                     levels = state.futuresLevels,
                     expanded = state.futuresExpanded,
-                    apiKeyMasked = state.futuresApiKeyMasked,
-                    apiKeyHasKey = state.futuresApiKeyHasKey,
-                    apiKeyEditing = state.futuresApiKeyEditing,
-                    apiKeyInput = state.futuresApiKeyInput,
-                    apiSecretInput = state.futuresApiSecretInput,
                     onToggleEnabled = viewModel::updateFuturesEnabled,
                     onToggleExpanded = viewModel::toggleFuturesExpanded,
                     onUpdateLevel = viewModel::updateFuturesLevel,
-                    onSave = { viewModel.saveLevelConfigs("futures") },
-                    onToggleApiKeyEditing = viewModel::toggleFuturesApiKeyEditing,
-                    onApiKeyInputChanged = viewModel::updateFuturesApiKeyInput,
-                    onApiSecretInputChanged = viewModel::updateFuturesApiSecretInput,
-                    onSaveApiKey = { viewModel.saveApiKey("futures") },
-                    onDeleteApiKey = { viewModel.deleteApiKey("futures") }
+                    onSave = { viewModel.saveLevelConfigs("futures") }
                 )
             }
         }
@@ -357,31 +363,255 @@ private fun PermissionsSection(
 }
 
 @Composable
+private fun AllApiKeysSection(
+    spotHasKey: Boolean,
+    spotMasked: String?,
+    futuresHasKey: Boolean,
+    futuresMasked: String?,
+    editing: Boolean,
+    saving: Boolean,
+    spotKeyInput: String,
+    spotSecretInput: String,
+    futuresKeyInput: String,
+    futuresSecretInput: String,
+    onToggleEditing: () -> Unit,
+    onSpotKeyChanged: (String) -> Unit,
+    onSpotSecretChanged: (String) -> Unit,
+    onFuturesKeyChanged: (String) -> Unit,
+    onFuturesSecretChanged: (String) -> Unit,
+    onSave: () -> Unit,
+    onDeleteSpotKey: () -> Unit,
+    onDeleteFuturesKey: () -> Unit
+) {
+    var showDeleteSpotDialog by remember { mutableStateOf(false) }
+    var showDeleteFuturesDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = BittickColor, modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("API Keys Binance", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = BittickColor)
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onToggleEditing, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        if (editing) Icons.Default.Clear else Icons.Default.Edit,
+                        contentDescription = if (editing) "Cancelar" else "Editar API Keys",
+                        tint = Secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (!spotHasKey && !futuresHasKey) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1A00)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Sin API Keys — Los bots automaticos estan desactivados",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFFA000)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (editing) {
+                // SPOT fields
+                Text("SPOT", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = spotKeyInput,
+                    onValueChange = onSpotKeyChanged,
+                    placeholder = { Text("API Key SPOT", color = Secondary.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = spotSecretInput,
+                    onValueChange = onSpotSecretChanged,
+                    placeholder = { Text("API Secret SPOT", color = Secondary.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // FUTUROS fields
+                Text("FUTUROS", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = futuresKeyInput,
+                    onValueChange = onFuturesKeyChanged,
+                    placeholder = { Text("API Key FUTUROS", color = Secondary.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = futuresSecretInput,
+                    onValueChange = onFuturesSecretChanged,
+                    placeholder = { Text("API Secret FUTUROS", color = Secondary.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val canSave = (spotKeyInput.isNotBlank() && spotSecretInput.isNotBlank()) ||
+                        (futuresKeyInput.isNotBlank() && futuresSecretInput.isNotBlank())
+                Button(
+                    onClick = onSave,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (canSave) BittickColor else Color.Gray,
+                        contentColor = OnSecondary
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canSave && !saving
+                ) {
+                    Text(if (saving) "Guardando..." else "Guardar API Keys", fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                // SPOT row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("SPOT:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall, color = Color(0xFFFF9800))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (spotHasKey) {
+                        Text(
+                            spotMasked ?: "••••••••",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { showDeleteSpotDialog = true }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar API Key SPOT", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
+                        }
+                    } else {
+                        Text("Sin configurar", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f), modifier = Modifier.weight(1f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // FUTUROS row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("FUTUROS:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (futuresHasKey) {
+                        Text(
+                            futuresMasked ?: "••••••••",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { showDeleteFuturesDialog = true }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar API Key FUTUROS", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
+                        }
+                    } else {
+                        Text("Sin configurar", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f), modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                "Solicitá tu API Key demo gratis en Binance:",
+                style = MaterialTheme.typography.labelSmall,
+                color = Secondary.copy(alpha = 0.6f)
+            )
+            Text(
+                "https://www.binance.com/en/my/settings/api-management",
+                style = MaterialTheme.typography.labelSmall,
+                color = BittickColor,
+                modifier = Modifier.clickable {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.binance.com/en/my/settings/api-management")))
+                    } catch (_: Exception) {}
+                }
+            )
+        }
+    }
+
+    if (showDeleteSpotDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSpotDialog = false },
+            title = { Text("Eliminar API Key SPOT") },
+            text = { Text("¿Seguro que querés eliminar la API Key de SPOT?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteSpotDialog = false
+                    onDeleteSpotKey()
+                }) { Text("Eliminar", color = Color(0xFFE53935)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSpotDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (showDeleteFuturesDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteFuturesDialog = false },
+            title = { Text("Eliminar API Key FUTUROS") },
+            text = { Text("¿Seguro que querés eliminar la API Key de FUTUROS?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteFuturesDialog = false
+                    onDeleteFuturesKey()
+                }) { Text("Eliminar", color = Color(0xFFE53935)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteFuturesDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+}
+
+@Composable
 private fun BotCard(
     label: String,
     botNumber: Int,
     enabled: Boolean,
     levels: List<com.bittick.network.LevelConfig>,
     expanded: Boolean,
-    apiKeyMasked: String?,
-    apiKeyHasKey: Boolean,
-    apiKeyEditing: Boolean,
-    apiKeyInput: String,
-    apiSecretInput: String,
     onToggleEnabled: (Boolean) -> Unit,
     onToggleExpanded: () -> Unit,
     onUpdateLevel: (Int, String, Any) -> Unit,
-    onSave: () -> Unit,
-    onToggleApiKeyEditing: () -> Unit,
-    onApiKeyInputChanged: (String) -> Unit,
-    onApiSecretInputChanged: (String) -> Unit,
-    onSaveApiKey: () -> Unit,
-    onDeleteApiKey: () -> Unit
+    onSave: () -> Unit
 ) {
     val hasInvalidLevel = levels.any { it.min_score < 6 || it.min_confidence < 6 }
-    var showDeleteKeyDialog by remember { mutableStateOf(false) }
-    var showDeleteSecretDialog by remember { mutableStateOf(false) }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -500,195 +730,9 @@ private fun BotCard(
                     ) {
                         Text("Guardar", fontWeight = FontWeight.SemiBold)
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // API Key section
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "API Key Binance",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = BittickColor,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (!apiKeyEditing) {
-                                    IconButton(onClick = onToggleApiKeyEditing, modifier = Modifier.size(28.dp)) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Editar API Key",
-                                            tint = Secondary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (!apiKeyHasKey) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1A00)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "Sin API Key — Los bots automaticos estan desactivados",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color(0xFFFFA000)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            if (apiKeyEditing) {
-                                OutlinedTextField(
-                                    value = apiKeyInput,
-                                    onValueChange = onApiKeyInputChanged,
-                                    placeholder = { Text("Pegá tu API Key aquí", color = Secondary.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall) },
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
-                                    singleLine = true
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                OutlinedTextField(
-                                    value = apiSecretInput,
-                                    onValueChange = onApiSecretInputChanged,
-                                    placeholder = { Text("Pegá tu API Secret aquí", color = Secondary.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall) },
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
-                                    singleLine = true
-                                )
-                            } else if (apiKeyHasKey) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "API Key: ${apiKeyMasked ?: "••••••••"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Secondary,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(onClick = { showDeleteKeyDialog = true }, modifier = Modifier.size(28.dp)) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar API Key", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "API Secret: •••••••••••••••••••",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Secondary,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(onClick = { showDeleteSecretDialog = true }, modifier = Modifier.size(28.dp)) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar API Secret", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
-                                    }
-                                }
-                            } else {
-                                OutlinedTextField(
-                                    value = "",
-                                    onValueChange = {},
-                                    placeholder = { Text("Sin API key configurada", color = Secondary.copy(alpha = 0.3f), style = MaterialTheme.typography.bodySmall) },
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Secondary),
-                                    enabled = false
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                "Solicitá tu API Key demo gratis en Binance:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Secondary.copy(alpha = 0.6f)
-                            )
-                            Text(
-                                "https://www.binance.com/en/my/settings/api-management",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = BittickColor,
-                                modifier = Modifier.clickable {
-                                    try {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.binance.com/en/my/settings/api-management")))
-                                    } catch (_: Exception) {}
-                                }
-                            )
-
-                            if (apiKeyEditing) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                val canSave = apiKeyInput.isNotBlank() && apiSecretInput.isNotBlank()
-                                Button(
-                                    onClick = onSaveApiKey,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (canSave) BittickColor else Color.Gray,
-                                        contentColor = OnSecondary
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = canSave
-                                ) {
-                                    Text("Guardar API Key", fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
-    }
-
-    if (showDeleteKeyDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteKeyDialog = false },
-            title = { Text("Eliminar API Key") },
-            text = { Text("¿Seguro que querés eliminar la API Key de este bot?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteKeyDialog = false
-                    onDeleteApiKey()
-                }) { Text("Eliminar", color = Color(0xFFE53935)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteKeyDialog = false }) { Text("Cancelar") }
-            }
-        )
-    }
-
-    if (showDeleteSecretDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteSecretDialog = false },
-            title = { Text("Eliminar API Secret") },
-            text = { Text("¿Seguro que querés eliminar el API Secret de este bot?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteSecretDialog = false
-                    onDeleteApiKey()
-                }) { Text("Eliminar", color = Color(0xFFE53935)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteSecretDialog = false }) { Text("Cancelar") }
-            }
-        )
     }
 }
 

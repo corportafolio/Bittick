@@ -334,8 +334,52 @@ fun TradingScreen(
                             }
                         }
 
-                        item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, state.spotOpportunities, viewModel, state.botNumber) }
-                        item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, state.futuresOpportunities, viewModel, state.botNumber) }
+                        item { BotSection("SPOT", state.spotBotStatus, state.spotPositions, viewModel, state.botNumber) }
+                        item { BotSection("FUTUROS", state.futuresBotStatus, state.futuresPositions, viewModel, state.botNumber) }
+
+                        item {
+                            val allOpportunities = (state.spotOpportunities + state.futuresOpportunities)
+                                .sortedByDescending { it.id }
+                            if (allOpportunities.isNotEmpty()) {
+                                val expanded = remember { mutableStateOf(true) }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = Surface),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().clickable { expanded.value = !expanded.value },
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = BittickColor, modifier = Modifier.height(20.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("OPORTUNIDADES", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                            Spacer(modifier = Modifier.weight(1f))
+                                            Text("${allOpportunities.size}", fontWeight = FontWeight.Bold, color = BittickColor, style = MaterialTheme.typography.labelMedium)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = if (expanded.value) "Colapsar" else "Expandir",
+                                                tint = Secondary
+                                            )
+                                        }
+                                        AnimatedVisibility(visible = expanded.value, enter = expandVertically(), exit = shrinkVertically()) {
+                                            Column {
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                HorizontalDivider(color = Secondary.copy(alpha = 0.15f))
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                allOpportunities.forEach { op ->
+                                                    OpportunityCard(op, onDelete = { viewModel.deleteOpportunity(op.id) })
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         state.error?.let { err ->
                             item {
@@ -359,7 +403,6 @@ private fun BotSection(
     label: String,
     status: BotStatusItem?,
     positions: List<BotPosition>,
-    opportunities: List<TradingOpportunityItem>,
     viewModel: TradingViewModel,
     botNumber: Int = 0
 ) {
@@ -444,22 +487,6 @@ private fun BotSection(
                         Text("Sin posiciones abiertas", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f))
                     } else {
                         positions.forEach { pos -> PositionCard(pos, viewModel) }
-                    }
-
-                    if (opportunities.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        HorizontalDivider(color = Secondary.copy(alpha = 0.15f))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Oportunidades ${label}",
-                            fontWeight = FontWeight.Bold,
-                            color = Secondary,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        opportunities.forEach { op ->
-                            OpportunityCard(op, onDelete = { viewModel.deleteOpportunity(op.id) })
-                        }
                     }
                 }
             }
@@ -665,15 +692,29 @@ private fun PositionCard(pos: BotPosition, viewModel: TradingViewModel) {
 
 @Composable
 private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit) {
-    val typeLabel = when (op.type) {
-        "long" -> "LONG"
-        "short" -> "SHORT"
+    val isSpot = op.botType == "spot"
+    val isLong = op.type == "long"
+    val typeLabel = when {
+        isSpot -> "SPOT"
+        isLong -> "LONG"
+        op.type == "short" -> "SHORT"
         else -> op.type.uppercase()
     }
-    val isLong = op.type == "long"
-    val signalColor = if (isLong) Color(0xFF1B5E20) else Color(0xFFB71C1C)
-    val signalBg = if (isLong) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
-    val icon = if (isLong) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
+    val signalColor = when {
+        isSpot -> Color(0xFFE65100)
+        isLong -> Color(0xFF1B5E20)
+        else -> Color(0xFFB71C1C)
+    }
+    val signalBg = when {
+        isSpot -> Color(0xFFFFF3E0)
+        isLong -> Color(0xFFE8F5E9)
+        else -> Color(0xFFFFEBEE)
+    }
+    val icon = when {
+        isSpot -> Icons.Default.ShoppingBasket
+        isLong -> Icons.AutoMirrored.Filled.TrendingUp
+        else -> Icons.AutoMirrored.Filled.TrendingDown
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

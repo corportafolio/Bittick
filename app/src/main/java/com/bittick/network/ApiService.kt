@@ -127,6 +127,12 @@ interface ApiService {
         @Body body: BotApiKeyRequest
     ): Response<SaveBotApiKeyResponse>
 
+    @POST("api/trading/bot-apikey/all")
+    suspend fun saveAllBotApiKeys(
+        @Header("x-wallet-address") walletAddress: String,
+        @Body body: BotApiKeyAllRequest
+    ): Response<SaveBotApiKeyResponse>
+
     @DELETE("api/trading/bot-apikey/{inscriptionId}/{mode}")
     suspend fun deleteBotApiKey(
         @Header("x-wallet-address") walletAddress: String,

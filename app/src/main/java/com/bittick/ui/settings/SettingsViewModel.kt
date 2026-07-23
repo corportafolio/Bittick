@@ -52,6 +52,12 @@ data class SettingsUiState(
     val futuresApiKeyEditing: Boolean = false,
     val futuresApiKeyInput: String = "",
     val futuresApiSecretInput: String = "",
+    val allApiKeysEditing: Boolean = false,
+    val allSpotKey: String = "",
+    val allSpotSecret: String = "",
+    val allFuturesKey: String = "",
+    val allFuturesSecret: String = "",
+    val allApiKeysSaving: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val apiKeyMessage: String? = null
@@ -358,13 +364,12 @@ class SettingsViewModel @Inject constructor(
                 }
             } catch (_: Exception) {}
         }
-        loadApiKey("spot")
-        loadApiKey("futures")
+        loadApiKey(inscriptionId, "spot")
+        loadApiKey(inscriptionId, "futures")
     }
 
-    private fun loadApiKey(mode: String) {
+    private fun loadApiKey(inscriptionId: String, mode: String) {
         val address = _state.value.walletAddress ?: return
-        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
         viewModelScope.launch {
             try {
                 val response = ApiClient.apiService.getBotApiKey(address, inscriptionId, mode)
@@ -445,7 +450,7 @@ class SettingsViewModel @Inject constructor(
                 val response = ApiClient.apiService.saveBotApiKey(address, body)
                 if (response.isSuccessful && response.body()?.exito == true) {
                     _state.value = _state.value.copy(apiKeyMessage = "API key guardada para $mode")
-                    loadApiKey(mode)
+                    loadApiKey(inscriptionId, mode)
                     if (mode == "spot" && !_state.value.spotEnabled) {
                         _state.value = _state.value.copy(spotEnabled = true)
                         savePreferences()
@@ -470,7 +475,7 @@ class SettingsViewModel @Inject constructor(
                 val response = ApiClient.apiService.deleteBotApiKey(address, inscriptionId, mode)
                 if (response.isSuccessful && response.body()?.exito == true) {
                     _state.value = _state.value.copy(apiKeyMessage = "API key eliminada de $mode")
-                    loadApiKey(mode)
+                    loadApiKey(inscriptionId, mode)
                 }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = "Error eliminando API key: ${e.message}")
@@ -480,6 +485,64 @@ class SettingsViewModel @Inject constructor(
 
     fun clearApiKeyMessage() {
         _state.value = _state.value.copy(apiKeyMessage = null)
+    }
+
+    fun toggleAllApiKeysEditing() {
+        val s = _state.value
+        if (s.allApiKeysEditing) {
+            _state.value = s.copy(allApiKeysEditing = false, allSpotKey = "", allSpotSecret = "", allFuturesKey = "", allFuturesSecret = "")
+        } else {
+            _state.value = s.copy(allApiKeysEditing = true)
+        }
+    }
+
+    fun updateAllSpotKey(value: String) { _state.value = _state.value.copy(allSpotKey = value) }
+    fun updateAllSpotSecret(value: String) { _state.value = _state.value.copy(allSpotSecret = value) }
+    fun updateAllFuturesKey(value: String) { _state.value = _state.value.copy(allFuturesKey = value) }
+    fun updateAllFuturesSecret(value: String) { _state.value = _state.value.copy(allFuturesSecret = value) }
+
+    fun saveAllApiKeys() {
+        val address = _state.value.walletAddress ?: return
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        val s = _state.value
+
+        val spotKey = s.allSpotKey.ifBlank { null }
+        val spotSecret = s.allSpotSecret.ifBlank { null }
+        val futuresKey = s.allFuturesKey.ifBlank { null }
+        val futuresSecret = s.allFuturesSecret.ifBlank { null }
+
+        if (spotKey == null && spotSecret == null && futuresKey == null && futuresSecret == null) return
+
+        _state.value = _state.value.copy(allApiKeysSaving = true)
+        viewModelScope.launch {
+            try {
+                val body = com.bittick.network.BotApiKeyAllRequest(
+                    inscription_id = inscriptionId,
+                    spot_key = spotKey,
+                    spot_secret = spotSecret,
+                    futures_key = futuresKey,
+                    futures_secret = futuresSecret
+                )
+                val response = ApiClient.apiService.saveAllBotApiKeys(address, body)
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    _state.value = _state.value.copy(
+                        allApiKeysEditing = false,
+                        allApiKeysSaving = false,
+                        allSpotKey = "",
+                        allSpotSecret = "",
+                        allFuturesKey = "",
+                        allFuturesSecret = "",
+                        apiKeyMessage = "API keys guardadas"
+                    )
+                    loadApiKey(inscriptionId, "spot")
+                    loadApiKey(inscriptionId, "futures")
+                } else {
+                    _state.value = _state.value.copy(allApiKeysSaving = false, error = "Error guardando API keys")
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(allApiKeysSaving = false, error = "Error guardando API keys: ${e.message}")
+            }
+        }
     }
 
     fun disconnectWallet() {
