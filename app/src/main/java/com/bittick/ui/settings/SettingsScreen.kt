@@ -122,55 +122,53 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(12.dp)) }
 
-            // 3. Configuración de Bots (only for premium users)
-            if (state.isPremium) {
-                item {
-                    BotCard(
-                        label = "SPOT",
-                        botNumber = state.botNumber ?: 0,
-                        enabled = state.spotEnabled,
-                        levels = state.spotLevels,
-                        expanded = state.spotExpanded,
-                        apiKeyMasked = state.spotApiKeyMasked,
-                        apiKeyHasKey = state.spotApiKeyHasKey,
-                        apiKeyEditing = state.spotApiKeyEditing,
-                        apiKeyInput = state.spotApiKeyInput,
-                        apiSecretInput = state.spotApiSecretInput,
-                        onToggleEnabled = viewModel::updateSpotEnabled,
-                        onToggleExpanded = viewModel::toggleSpotExpanded,
-                        onUpdateLevel = viewModel::updateSpotLevel,
-                        onSave = { viewModel.saveLevelConfigs("spot") },
-                        onToggleApiKeyEditing = viewModel::toggleSpotApiKeyEditing,
-                        onApiKeyInputChanged = viewModel::updateSpotApiKeyInput,
-                        onApiSecretInputChanged = viewModel::updateSpotApiSecretInput,
-                        onSaveApiKey = { viewModel.saveApiKey("spot") },
-                        onDeleteApiKey = { viewModel.deleteApiKey("spot") }
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(12.dp)) }
-                item {
-                    BotCard(
-                        label = "FUTUROS",
-                        botNumber = state.botNumber ?: 0,
-                        enabled = state.futuresEnabled,
-                        levels = state.futuresLevels,
-                        expanded = state.futuresExpanded,
-                        apiKeyMasked = state.futuresApiKeyMasked,
-                        apiKeyHasKey = state.futuresApiKeyHasKey,
-                        apiKeyEditing = state.futuresApiKeyEditing,
-                        apiKeyInput = state.futuresApiKeyInput,
-                        apiSecretInput = state.futuresApiSecretInput,
-                        onToggleEnabled = viewModel::updateFuturesEnabled,
-                        onToggleExpanded = viewModel::toggleFuturesExpanded,
-                        onUpdateLevel = viewModel::updateFuturesLevel,
-                        onSave = { viewModel.saveLevelConfigs("futures") },
-                        onToggleApiKeyEditing = viewModel::toggleFuturesApiKeyEditing,
-                        onApiKeyInputChanged = viewModel::updateFuturesApiKeyInput,
-                        onApiSecretInputChanged = viewModel::updateFuturesApiSecretInput,
-                        onSaveApiKey = { viewModel.saveApiKey("futures") },
-                        onDeleteApiKey = { viewModel.deleteApiKey("futures") }
-                    )
-                }
+            // 3. Configuración de Bots
+            item {
+                BotCard(
+                    label = "SPOT",
+                    botNumber = state.botNumber ?: 0,
+                    enabled = state.spotEnabled,
+                    levels = state.spotLevels,
+                    expanded = state.spotExpanded,
+                    apiKeyMasked = state.spotApiKeyMasked,
+                    apiKeyHasKey = state.spotApiKeyHasKey,
+                    apiKeyEditing = state.spotApiKeyEditing,
+                    apiKeyInput = state.spotApiKeyInput,
+                    apiSecretInput = state.spotApiSecretInput,
+                    onToggleEnabled = viewModel::updateSpotEnabled,
+                    onToggleExpanded = viewModel::toggleSpotExpanded,
+                    onUpdateLevel = viewModel::updateSpotLevel,
+                    onSave = { viewModel.saveLevelConfigs("spot") },
+                    onToggleApiKeyEditing = viewModel::toggleSpotApiKeyEditing,
+                    onApiKeyInputChanged = viewModel::updateSpotApiKeyInput,
+                    onApiSecretInputChanged = viewModel::updateSpotApiSecretInput,
+                    onSaveApiKey = { viewModel.saveApiKey("spot") },
+                    onDeleteApiKey = { viewModel.deleteApiKey("spot") }
+                )
+            }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+            item {
+                BotCard(
+                    label = "FUTUROS",
+                    botNumber = state.botNumber ?: 0,
+                    enabled = state.futuresEnabled,
+                    levels = state.futuresLevels,
+                    expanded = state.futuresExpanded,
+                    apiKeyMasked = state.futuresApiKeyMasked,
+                    apiKeyHasKey = state.futuresApiKeyHasKey,
+                    apiKeyEditing = state.futuresApiKeyEditing,
+                    apiKeyInput = state.futuresApiKeyInput,
+                    apiSecretInput = state.futuresApiSecretInput,
+                    onToggleEnabled = viewModel::updateFuturesEnabled,
+                    onToggleExpanded = viewModel::toggleFuturesExpanded,
+                    onUpdateLevel = viewModel::updateFuturesLevel,
+                    onSave = { viewModel.saveLevelConfigs("futures") },
+                    onToggleApiKeyEditing = viewModel::toggleFuturesApiKeyEditing,
+                    onApiKeyInputChanged = viewModel::updateFuturesApiKeyInput,
+                    onApiSecretInputChanged = viewModel::updateFuturesApiSecretInput,
+                    onSaveApiKey = { viewModel.saveApiKey("futures") },
+                    onDeleteApiKey = { viewModel.deleteApiKey("futures") }
+                )
             }
         }
     }
