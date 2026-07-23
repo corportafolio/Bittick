@@ -1,11 +1,19 @@
 *.iml
-.gradle
+.gradle/
 /local.properties
-/.idea
+/.idea/
 .DS_Store
-/build
-/app/build
+/build/
+/app/build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+node_modules/
+*.log
+.vscode/
+.opencode/
+.opencode
+diseño de pantallas/
+docs/
+hermes/
