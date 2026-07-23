@@ -62,9 +62,31 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(true) {
         viewModel.refreshWalletState()
+    }
+
+    LaunchedEffect(state.error) {
+        state.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(state.apiKeyMessage) {
+        state.apiKeyMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearApiKeyMessage()
+        }
+    }
+
+    LaunchedEffect(state.levelConfigsMessage) {
+        state.levelConfigsMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearLevelConfigsMessage()
+        }
     }
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
@@ -87,6 +109,7 @@ fun SettingsScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Primary)
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Primary
     ) { padding ->
         LazyColumn(
@@ -156,6 +179,7 @@ fun SettingsScreen(
                     enabled = state.spotEnabled,
                     levels = state.spotLevels,
                     expanded = state.spotExpanded,
+                    saving = state.levelConfigsSaving,
                     onToggleEnabled = viewModel::updateSpotEnabled,
                     onToggleExpanded = viewModel::toggleSpotExpanded,
                     onUpdateLevel = viewModel::updateSpotLevel,
@@ -170,6 +194,7 @@ fun SettingsScreen(
                     enabled = state.futuresEnabled,
                     levels = state.futuresLevels,
                     expanded = state.futuresExpanded,
+                    saving = state.levelConfigsSaving,
                     onToggleEnabled = viewModel::updateFuturesEnabled,
                     onToggleExpanded = viewModel::toggleFuturesExpanded,
                     onUpdateLevel = viewModel::updateFuturesLevel,
@@ -606,6 +631,7 @@ private fun BotCard(
     enabled: Boolean,
     levels: List<com.bittick.network.LevelConfig>,
     expanded: Boolean,
+    saving: Boolean,
     onToggleEnabled: (Boolean) -> Unit,
     onToggleExpanded: () -> Unit,
     onUpdateLevel: (Int, String, Any) -> Unit,
@@ -726,9 +752,9 @@ private fun BotCard(
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !hasInvalidLevel
+                        enabled = !hasInvalidLevel && !saving
                     ) {
-                        Text("Guardar", fontWeight = FontWeight.SemiBold)
+                        Text(if (saving) "Guardando..." else "Guardar", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

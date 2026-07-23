@@ -58,9 +58,11 @@ data class SettingsUiState(
     val allFuturesKey: String = "",
     val allFuturesSecret: String = "",
     val allApiKeysSaving: Boolean = false,
+    val levelConfigsSaving: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val apiKeyMessage: String? = null
+    val apiKeyMessage: String? = null,
+    val levelConfigsMessage: String? = null
 )
 
 fun defaultLevels() = listOf(
@@ -154,9 +156,11 @@ class SettingsViewModel @Inject constructor(
                 if (response.isSuccessful && response.body()?.exito == true) {
                     val data = response.body()!!.data!!
                     val inscriptions = data.inscriptions
+                    val serverSelected = inscriptions.firstOrNull { it.selected == true }
+                    val currentSelected = _state.value.selectedInscription
                     _state.value = _state.value.copy(
                         inscriptions = inscriptions,
-                        selectedInscription = inscriptions.firstOrNull { it.selected == true },
+                        selectedInscription = serverSelected ?: currentSelected,
                         tier = data.tier,
                         botNumber = data.selectedBotNum
                     )
@@ -224,8 +228,9 @@ class SettingsViewModel @Inject constructor(
 
     fun savePreferences() {
         viewModelScope.launch {
-            val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return@launch
-            val address = _state.value.walletAddress ?: return@launch
+            val inscriptionId = _state.value.selectedInscription?.inscriptionId
+                ?: preferences.getSelectedInscriptionId() ?: return@launch
+            val address = _state.value.walletAddress ?: preferences.getWalletAddress() ?: return@launch
 
             try {
                 val body = com.bittick.network.SavePreferencesRequest(
@@ -301,6 +306,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateSpotLevel(level: Int, field: String, value: Any) {
+        android.util.Log.d("SettingsVM", "updateSpotLevel(level=$level, field=$field, value=$value)")
         val levels = _state.value.spotLevels.map {
             if (it.level == level) {
                 when (field) {
@@ -317,6 +323,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateFuturesLevel(level: Int, field: String, value: Any) {
+        android.util.Log.d("SettingsVM", "updateFuturesLevel(level=$level, field=$field, value=$value)")
         val levels = _state.value.futuresLevels.map {
             if (it.level == level) {
                 when (field) {
@@ -333,9 +340,24 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun saveLevelConfigs(mode: String) {
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId
+            ?: preferences.getSelectedInscriptionId()
+        val address = _state.value.walletAddress ?: preferences.getWalletAddress()
+        android.util.Log.d("SettingsVM", "saveLevelConfigs($mode): inscriptionId=$inscriptionId, address=$address")
+        if (inscriptionId == null) {
+            android.util.Log.e("SettingsVM", "saveLevelConfigs($mode): inscriptionId is NULL")
+            _state.value = _state.value.copy(error = "No hay inscripción seleccionada")
+            return
+        }
+        if (address == null) {
+            android.util.Log.e("SettingsVM", "saveLevelConfigs($mode): address is NULL")
+            _state.value = _state.value.copy(error = "No hay wallet conectada")
+            return
+        }
+        val levels = if (mode == "spot") _state.value.spotLevels else _state.value.futuresLevels
+        android.util.Log.d("SettingsVM", "saveLevelConfigs($mode): sending ${levels.size} levels: ${levels.map { "L${it.level}=s${it.min_score}/c${it.min_confidence}/\$${it.position_size_usdt}/on=${it.enabled}" }}")
+        _state.value = _state.value.copy(levelConfigsSaving = true, levelConfigsMessage = null)
         viewModelScope.launch {
-            val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return@launch
-            val levels = if (mode == "spot") _state.value.spotLevels else _state.value.futuresLevels
             try {
                 val body = com.bittick.network.LevelConfigsRequest(
                     inscription_id = inscriptionId,
@@ -343,13 +365,22 @@ class SettingsViewModel @Inject constructor(
                     levels = levels
                 )
                 val response = ApiClient.apiService.saveLevelConfigs(body)
+                android.util.Log.d("SettingsVM", "saveLevelConfigs($mode): response code=${response.code()}, exito=${response.body()?.exito}")
                 if (response.isSuccessful && response.body()?.exito == true) {
-                    _state.value = _state.value.copy(error = null)
+                    android.util.Log.d("SettingsVM", "saveLevelConfigs($mode): SUCCESS")
+                    val label = if (mode == "spot") "SPOT" else "FUTUROS"
+                    _state.value = _state.value.copy(
+                        levelConfigsSaving = false,
+                        levelConfigsMessage = "Niveles $label guardados"
+                    )
                 } else {
-                    _state.value = _state.value.copy(error = "Error guardando preferencias de $mode")
+                    val errorMsg = "Error guardando niveles $mode (HTTP ${response.code()})"
+                    android.util.Log.e("SettingsVM", "saveLevelConfigs($mode): $errorMsg")
+                    _state.value = _state.value.copy(levelConfigsSaving = false, error = errorMsg)
                 }
             } catch (e: Exception) {
-                _state.value = _state.value.copy(error = "Error guardando: ${e.message}")
+                android.util.Log.e("SettingsVM", "saveLevelConfigs($mode): EXCEPTION ${e.message}", e)
+                _state.value = _state.value.copy(levelConfigsSaving = false, error = "Error guardando niveles: ${e.message}")
             }
         }
     }
@@ -378,7 +409,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun loadApiKey(inscriptionId: String, mode: String) {
-        val address = _state.value.walletAddress ?: return
+        val address = _state.value.walletAddress ?: preferences.getWalletAddress() ?: return
         viewModelScope.launch {
             try {
                 val response = ApiClient.apiService.getBotApiKey(address, inscriptionId, mode)
@@ -441,8 +472,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun saveApiKey(mode: String) {
-        val address = _state.value.walletAddress ?: return
-        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        val address = _state.value.walletAddress ?: preferences.getWalletAddress() ?: return
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId
+            ?: preferences.getSelectedInscriptionId() ?: return
         val apiKey = if (mode == "spot") _state.value.spotApiKeyInput else _state.value.futuresApiKeyInput
         val apiSecret = if (mode == "spot") _state.value.spotApiSecretInput else _state.value.futuresApiSecretInput
 
@@ -477,8 +509,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun deleteApiKey(mode: String) {
-        val address = _state.value.walletAddress ?: return
-        val inscriptionId = _state.value.selectedInscription?.inscriptionId ?: return
+        val address = _state.value.walletAddress ?: preferences.getWalletAddress() ?: return
+        val inscriptionId = _state.value.selectedInscription?.inscriptionId
+            ?: preferences.getSelectedInscriptionId() ?: return
         viewModelScope.launch {
             try {
                 val response = ApiClient.apiService.deleteBotApiKey(address, inscriptionId, mode)
@@ -492,8 +525,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun clearLevelConfigsMessage() {
+        _state.value = _state.value.copy(levelConfigsMessage = null)
+    }
+
     fun clearApiKeyMessage() {
         _state.value = _state.value.copy(apiKeyMessage = null)
+    }
+
+    fun clearError() {
+        _state.value = _state.value.copy(error = null)
     }
 
     fun toggleAllApiKeysEditing() {
@@ -511,16 +552,21 @@ class SettingsViewModel @Inject constructor(
     fun updateAllFuturesSecret(value: String) { _state.value = _state.value.copy(allFuturesSecret = value) }
 
     fun saveAllApiKeys() {
-        val address = _state.value.walletAddress
+        android.util.Log.d("SettingsVM", "saveAllApiKeys: starting")
+        val address = _state.value.walletAddress ?: preferences.getWalletAddress()
         if (address == null) {
+            android.util.Log.e("SettingsVM", "saveAllApiKeys: address is null")
             _state.value = _state.value.copy(error = "No hay wallet conectada")
             return
         }
         val inscriptionId = _state.value.selectedInscription?.inscriptionId
+            ?: preferences.getSelectedInscriptionId()
         if (inscriptionId == null) {
+            android.util.Log.e("SettingsVM", "saveAllApiKeys: inscriptionId is null (selectedInscription=${_state.value.selectedInscription})")
             _state.value = _state.value.copy(error = "No hay inscripción seleccionada")
             return
         }
+        android.util.Log.d("SettingsVM", "saveAllApiKeys: address=$address, inscriptionId=$inscriptionId")
         val s = _state.value
 
         val spotKey = s.allSpotKey.ifBlank { null }
@@ -534,6 +580,7 @@ class SettingsViewModel @Inject constructor(
         }
 
         _state.value = _state.value.copy(allApiKeysSaving = true)
+        android.util.Log.d("SettingsVM", "saveAllApiKeys: calling server...")
         viewModelScope.launch {
             try {
                 val body = com.bittick.network.BotApiKeyAllRequest(
@@ -543,8 +590,11 @@ class SettingsViewModel @Inject constructor(
                     futures_key = futuresKey,
                     futures_secret = futuresSecret
                 )
+                android.util.Log.d("SettingsVM", "saveAllApiKeys: body=$body")
                 val response = ApiClient.apiService.saveAllBotApiKeys(address, body)
+                android.util.Log.d("SettingsVM", "saveAllApiKeys: response code=${response.code()}, exito=${response.body()?.exito}")
                 if (response.isSuccessful && response.body()?.exito == true) {
+                    android.util.Log.d("SettingsVM", "saveAllApiKeys: SUCCESS")
                     _state.value = _state.value.copy(
                         allApiKeysEditing = false,
                         allApiKeysSaving = false,
@@ -557,9 +607,12 @@ class SettingsViewModel @Inject constructor(
                     loadApiKey(inscriptionId, "spot")
                     loadApiKey(inscriptionId, "futures")
                 } else {
-                    _state.value = _state.value.copy(allApiKeysSaving = false, error = "Error guardando API keys")
+                    val errorMsg = "Error guardando API keys (HTTP ${response.code()})"
+                    android.util.Log.e("SettingsVM", "saveAllApiKeys: $errorMsg body=${response.errorBody()?.string()}")
+                    _state.value = _state.value.copy(allApiKeysSaving = false, error = errorMsg)
                 }
             } catch (e: Exception) {
+                android.util.Log.e("SettingsVM", "saveAllApiKeys: EXCEPTION ${e.message}", e)
                 _state.value = _state.value.copy(allApiKeysSaving = false, error = "Error guardando API keys: ${e.message}")
             }
         }
