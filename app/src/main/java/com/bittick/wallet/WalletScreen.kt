@@ -461,9 +461,6 @@ private fun ConnectedWalletSection(
             SelectedInscriptionCard(
                 inscription = previewInscription,
                 botImageUrl = previewBotImageUrl,
-                isPremium = isPremium,
-                tier = tier,
-                botNumber = botNumber,
                 selectedInscription = selectedInscription,
                 onConfirmSelection = onConfirmSelection
             )
@@ -509,9 +506,6 @@ private fun ConnectedWalletSection(
 private fun SelectedInscriptionCard(
     inscription: InscriptionInfo,
     botImageUrl: String?,
-    isPremium: Boolean,
-    tier: String?,
-    botNumber: Int?,
     selectedInscription: InscriptionInfo?,
     onConfirmSelection: () -> Unit
 ) {
@@ -570,15 +564,15 @@ private fun SelectedInscriptionCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Bot #${botNumber ?: inscription.num}",
+                    text = "Bot #${inscription.num}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = tier ?: inscription.tier,
+                    text = inscription.tier,
                     fontSize = 14.sp,
-                    color = if (isPremium) Color(0xFFF7931A) else Color.Gray
+                    color = if (inscription.tier == "FOUNDER") Color(0xFFF7931A) else Color.Gray
                 )
             }
 
@@ -589,7 +583,7 @@ private fun SelectedInscriptionCard(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
-                if (isPremium) {
+                if (inscription.tier == "FOUNDER") {
                     Box(
                         modifier = Modifier
                             .padding(4.dp)
