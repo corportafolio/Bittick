@@ -388,148 +388,163 @@ private fun PermissionsSection(
 }
 
 @Composable
-private fun AllApiKeysSection(
-    spotHasKey: Boolean,
-    spotMasked: String?,
-    futuresHasKey: Boolean,
-    futuresMasked: String?,
-    editing: Boolean,
-    saving: Boolean,
-    spotKeyInput: String,
-    spotSecretInput: String,
-    futuresKeyInput: String,
-    futuresSecretInput: String,
-    onToggleEditing: () -> Unit,
-    onSpotKeyChanged: (String) -> Unit,
-    onSpotSecretChanged: (String) -> Unit,
-    onFuturesKeyChanged: (String) -> Unit,
-    onFuturesSecretChanged: (String) -> Unit,
-    onSave: () -> Unit,
-    onDeleteSpotKey: () -> Unit,
-    onDeleteFuturesKey: () -> Unit
-) {
-    var showDeleteSpotDialog by remember { mutableStateOf(false) }
-    var showDeleteFuturesDialog by remember { mutableStateOf(false) }
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        shape = RoundedCornerShape(12.dp)
+    private fun AllApiKeysSection(
+        spotHasKey: Boolean,
+        spotMasked: String?,
+        futuresHasKey: Boolean,
+        futuresMasked: String?,
+        editing: Boolean,
+        saving: Boolean,
+        spotKeyInput: String,
+        spotSecretInput: String,
+        futuresKeyInput: String,
+        futuresSecretInput: String,
+        onToggleEditing: () -> Unit,
+        onSpotKeyChanged: (String) -> Unit,
+        onSpotSecretChanged: (String) -> Unit,
+        onFuturesKeyChanged: (String) -> Unit,
+        onFuturesSecretChanged: (String) -> Unit,
+        onSave: () -> Unit,
+        onDeleteSpotKey: () -> Unit,
+        onDeleteFuturesKey: () -> Unit
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = BittickColor, modifier = Modifier.height(20.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("API Keys Binance", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = BittickColor)
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = onToggleEditing, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        if (editing) Icons.Default.Clear else Icons.Default.Edit,
-                        contentDescription = if (editing) "Cancelar" else "Editar API Keys",
-                        tint = Secondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-}
-                }
+        var showDeleteSpotDialog by remember { mutableStateOf(false) }
+        var showDeleteFuturesDialog by remember { mutableStateOf(false) }
+        var isCollapsed by remember { mutableStateOf(false) }
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val hasAnyKey = spotHasKey || futuresHasKey
 
-            Spacer(modifier = Modifier.height(if (!editing) 2.dp else 8.dp))
-
-            if (!spotHasKey && !futuresHasKey) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1A00)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Surface),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Sin API Keys — Los bots automáticos están desactivados",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFFFA000)
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = BittickColor, modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("API Keys Binance", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = BittickColor)
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (hasAnyKey) {
+                        IconButton(onClick = { isCollapsed = !isCollapsed }, modifier = Modifier.size(28.dp)) {
+                            Icon(
+                                if (isCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                                contentDescription = if (isCollapsed) "Expandir" else "Colapsar",
+                                tint = Secondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    IconButton(onClick = onToggleEditing, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            if (editing) Icons.Default.Clear else Icons.Default.Edit,
+                            contentDescription = if (editing) "Cancelar" else "Editar API Keys",
+                            tint = Secondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(if (!editing) 2.dp else 8.dp))
-            }
+                if (!isCollapsed) {
+                    Spacer(modifier = Modifier.height(if (!editing) 2.dp else 8.dp))
 
-            // SPOT Section
-            ApiKeySection(
-                label = "SPOT",
-                labelColor = Color(0xFFFF9800),
-                hasKey = spotHasKey,
-                maskedKey = spotMasked,
-                editing = editing,
-                keyInput = spotKeyInput,
-                secretInput = spotSecretInput,
-                onKeyChanged = onSpotKeyChanged,
-                onSecretChanged = onSpotSecretChanged,
-                onDelete = { showDeleteSpotDialog = true }
-            )
+                    if (!spotHasKey && !futuresHasKey) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1A00)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Sin API Keys — Los bots automáticos están desactivados",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFFFA000)
+                                )
+                            }
+                        }
 
-            Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(if (!editing) 2.dp else 8.dp))
+                    }
 
-            // FUTUROS Section
-            ApiKeySection(
-                label = "FUTUROS",
-                labelColor = Color(0xFF4CAF50),
-                hasKey = futuresHasKey,
-                maskedKey = futuresMasked,
-                editing = editing,
-                keyInput = futuresKeyInput,
-                secretInput = futuresSecretInput,
-                onKeyChanged = onFuturesKeyChanged,
-                onSecretChanged = onFuturesSecretChanged,
-onDelete = { showDeleteFuturesDialog = true }
-            )
+                    // SPOT Section
+                    ApiKeySection(
+                        label = "SPOT",
+                        labelColor = Color(0xFFFF9800),
+                        hasKey = spotHasKey,
+                        maskedKey = spotMasked,
+                        editing = editing,
+                        keyInput = spotKeyInput,
+                        secretInput = spotSecretInput,
+                        onKeyChanged = onSpotKeyChanged,
+                        onSecretChanged = onSpotSecretChanged,
+                        onDelete = { showDeleteSpotDialog = true }
+                    )
 
-            Spacer(modifier = Modifier.height(if (!editing) 2.dp else 6.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-            if (editing) {
-                val canSave = (spotKeyInput.isNotBlank() && spotSecretInput.isNotBlank()) ||
-                        (futuresKeyInput.isNotBlank() && futuresSecretInput.isNotBlank())
-                Button(
-                    onClick = onSave,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (canSave) BittickColor else Color.Gray,
-                        contentColor = OnSecondary
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = canSave && !saving
-                ) {
-                    Text(if (saving) "Guardando..." else "Guardar API Keys", fontWeight = FontWeight.SemiBold)
+                    // FUTUROS Section
+                    ApiKeySection(
+                        label = "FUTUROS",
+                        labelColor = Color(0xFF4CAF50),
+                        hasKey = futuresHasKey,
+                        maskedKey = futuresMasked,
+                        editing = editing,
+                        keyInput = futuresKeyInput,
+                        secretInput = futuresSecretInput,
+                        onKeyChanged = onFuturesKeyChanged,
+                        onSecretChanged = onFuturesSecretChanged,
+                        onDelete = { showDeleteFuturesDialog = true }
+                    )
+
+                    Spacer(modifier = Modifier.height(if (!editing) 2.dp else 6.dp))
+
+                    if (editing) {
+                        val canSave = (spotKeyInput.isNotBlank() && spotSecretInput.isNotBlank()) ||
+                                (futuresKeyInput.isNotBlank() && futuresSecretInput.isNotBlank())
+                        Button(
+                            onClick = onSave,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (canSave) BittickColor else Color.Gray,
+                                contentColor = OnSecondary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = canSave && !saving
+                        ) {
+                            Text(if (saving) "Guardando..." else "Guardar API Keys", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        "Solicitá tu API Key demo gratis en Binance:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Secondary.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        "https://www.binance.com/en/my/settings/api-management",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = BittickColor,
+                        modifier = Modifier.clickable {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.binance.com/en/my/settings/api-management")))
+                            } catch (_: Exception) {}
+                        }
+                    )
                 }
             }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                "Solicitá tu API Key demo gratis en Binance:",
-                style = MaterialTheme.typography.labelSmall,
-                color = Secondary.copy(alpha = 0.6f)
-            )
-            Text(
-                "https://www.binance.com/en/my/settings/api-management",
-                style = MaterialTheme.typography.labelSmall,
-                color = BittickColor,
-                modifier = Modifier.clickable {
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.binance.com/en/my/settings/api-management")))
-                    } catch (_: Exception) {}
-                }
-            )
         }
-    }
 
-    if (showDeleteSpotDialog) {
+        if (showDeleteSpotDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteSpotDialog = false },
             title = { Text("Eliminar API Key SPOT") },
