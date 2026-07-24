@@ -180,6 +180,8 @@ class SettingsViewModel @Inject constructor(
             loadInscriptions(address)
             loadPreferences(inscriptionId)
             loadAllLevels(inscriptionId)
+            loadApiKey(inscriptionId, "spot")
+            loadApiKey(inscriptionId, "futures")
         }
     }
 

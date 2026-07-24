@@ -370,6 +370,27 @@ class WalletViewModel @Inject constructor(
                     } catch (e: Exception) {
                         Log.e(TAG, "Error fetching levels: ${e.message}", e)
                     }
+
+                    // NUEVO: Fetch e imprimir estado de API keys del bot seleccionado
+                    try {
+                        val keyStatusResponse = ApiClient.apiService.getBotApiKeyStatus(preview.inscriptionId)
+                        if (keyStatusResponse.isSuccessful && keyStatusResponse.body()?.exito == true) {
+                            val d = keyStatusResponse.body()?.data
+                            if (d != null) {
+                                val anyKey = d.spotApiKey || d.spotApiSecret || d.futuresApiKey || d.futuresApiSecret
+                                Log.d(TAG, "=== API KEYS BOT #${preview.num} ===")
+                                if (!anyKey) {
+                                    Log.d(TAG, "Sin API keys configuradas para este bot")
+                                } else {
+                                    Log.d(TAG, "SPOT:    ${if (d.spotApiKey) "\u2713 API Key" else "\u2717 API Key"}  ${if (d.spotApiSecret) "\u2713 API Secret" else "\u2717 API Secret"}")
+                                    Log.d(TAG, "FUTUROS: ${if (d.futuresApiKey) "\u2713 API Key" else "\u2717 API Key"}  ${if (d.futuresApiSecret) "\u2713 API Secret" else "\u2717 API Secret"}")
+                                }
+                                Log.d(TAG, "=== FIN API KEYS ===")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching API key status: ${e.message}")
+                    }
                 } else {
                     Log.e(TAG, "Bot #${preview.num} falló: code=${response.code()}")
                 }

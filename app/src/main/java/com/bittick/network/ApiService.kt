@@ -144,6 +144,11 @@ interface ApiService {
         @Path("inscriptionId") inscriptionId: String,
         @Path("mode") mode: String
     ): Response<DeleteBotApiKeyResponse>
+
+    @GET("api/trading/bot-apikey/{inscriptionId}/status")
+    suspend fun getBotApiKeyStatus(
+        @Path("inscriptionId") inscriptionId: String
+    ): Response<BotApiKeyStatusResponse>
 }
 
 object ApiClient {

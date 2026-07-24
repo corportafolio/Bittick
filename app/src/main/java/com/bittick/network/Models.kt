@@ -263,3 +263,15 @@ data class BotApiKeyRequest(val inscription_id: String, val mode: String, val ap
 data class BotApiKeyAllRequest(val inscription_id: String, val spot_key: String?, val spot_secret: String?, val futures_key: String?, val futures_secret: String?)
 data class SaveBotApiKeyResponse(val exito: Boolean, val message: String?)
 data class DeleteBotApiKeyResponse(val exito: Boolean, val message: String?)
+
+// Bot API Key Status (check all 4 keys at once)
+data class BotApiKeyStatusResponse(
+    val exito: Boolean,
+    val data: BotApiKeyStatusData?
+)
+data class BotApiKeyStatusData(
+    @SerializedName("spot_api_key") val spotApiKey: Boolean,
+    @SerializedName("spot_api_secret") val spotApiSecret: Boolean,
+    @SerializedName("futures_api_key") val futuresApiKey: Boolean,
+    @SerializedName("futures_api_secret") val futuresApiSecret: Boolean
+)
