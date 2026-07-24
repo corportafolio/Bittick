@@ -784,8 +784,10 @@ private fun OpportunityCard(op: TradingOpportunityItem, onDelete: (Int) -> Unit)
                 Spacer(modifier = Modifier.width(8.dp))
                 InfoChip("Objetivo", "\$${op.target}")
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            InfoChip("Stop Loss", "\$${op.stopLoss}")
+            if (!isSpot) {
+                Spacer(modifier = Modifier.height(4.dp))
+                InfoChip("Stop Loss", "\$${op.stopLoss}")
+            }
 
             if (op.explanation.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
