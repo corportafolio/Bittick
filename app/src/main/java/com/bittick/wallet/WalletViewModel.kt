@@ -350,6 +350,26 @@ class WalletViewModel @Inject constructor(
                         previewBotImageUrl = null
                     )
                     preferences.updateSessionImage(previewImageUrl ?: "")
+
+                    // NUEVO: Fetch e imprimir niveles del bot seleccionado
+                    try {
+                        val levelsResponse = ApiClient.apiService.getAllBotLevels(preview.inscriptionId)
+                        if (levelsResponse.isSuccessful && levelsResponse.body()?.exito == true) {
+                            val data = levelsResponse.body()?.data
+                            if (data != null) {
+                                Log.d(TAG, "=== NIVELES BOT #${preview.num} (inscription=${preview.inscriptionId}) ===")
+                                data.spot.forEach { l ->
+                                    Log.d(TAG, "SPOT L${l.level}: score=${l.minScore} conf=${l.minConfidence} amt=\$${l.positionSizeUsdt} enabled=${l.isEnabled} updated=${l.updatedAt}")
+                                }
+                                data.futures.forEach { l ->
+                                    Log.d(TAG, "FUT L${l.level}: score=${l.minScore} conf=${l.minConfidence} amt=\$${l.positionSizeUsdt} enabled=${l.isEnabled} updated=${l.updatedAt}")
+                                }
+                                Log.d(TAG, "=== FIN NIVELES ===")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching levels: ${e.message}", e)
+                    }
                 } else {
                     Log.e(TAG, "Bot #${preview.num} falló: code=${response.code()}")
                 }
