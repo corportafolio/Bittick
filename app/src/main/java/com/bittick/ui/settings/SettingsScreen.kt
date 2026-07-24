@@ -432,10 +432,10 @@ private fun AllApiKeysSection(
                         tint = Secondary,
                         modifier = Modifier.size(18.dp)
                     )
+}
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (!editing) 2.dp else 8.dp))
 
             if (!spotHasKey && !futuresHasKey) {
                 Card(
@@ -457,7 +457,7 @@ private fun AllApiKeysSection(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (!editing) 2.dp else 8.dp))
             }
 
             // SPOT Section
@@ -487,10 +487,10 @@ private fun AllApiKeysSection(
                 secretInput = futuresSecretInput,
                 onKeyChanged = onFuturesKeyChanged,
                 onSecretChanged = onFuturesSecretChanged,
-                onDelete = { showDeleteFuturesDialog = true }
+onDelete = { showDeleteFuturesDialog = true }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (!editing) 2.dp else 6.dp))
 
             if (editing) {
                 val canSave = (spotKeyInput.isNotBlank() && spotSecretInput.isNotBlank()) ||
@@ -509,7 +509,7 @@ private fun AllApiKeysSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 "Solicitá tu API Key demo gratis en Binance:",
@@ -565,31 +565,27 @@ private fun AllApiKeysSection(
 }
 
 @Composable
-private fun ApiKeySection(
-    label: String,
-    labelColor: Color,
-    hasKey: Boolean,
-    maskedKey: String?,
-    editing: Boolean,
-    keyInput: String,
-    secretInput: String,
-    onKeyChanged: (String) -> Unit,
-    onSecretChanged: (String) -> Unit,
-    onDelete: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(label, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall, color = labelColor)
-            Spacer(modifier = Modifier.width(8.dp))
+    private fun ApiKeySection(
+        label: String,
+        labelColor: Color,
+        hasKey: Boolean,
+        maskedKey: String?,
+        editing: Boolean,
+        keyInput: String,
+        secretInput: String,
+        onKeyChanged: (String) -> Unit,
+        onSecretChanged: (String) -> Unit,
+        onDelete: () -> Unit
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             if (hasKey && !editing) {
-                // Visual mode: show green check + delete icon
+                // Visual mode: show green check + delete icon for Key
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(label, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall, color = labelColor)
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "✓ API Key guardada",
                         style = MaterialTheme.typography.bodySmall,
@@ -600,7 +596,7 @@ private fun ApiKeySection(
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar API Key $label", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                // Visual mode: show green check + delete icon for Secret
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -628,9 +624,8 @@ private fun ApiKeySection(
                     Text("Sin configurar", style = MaterialTheme.typography.bodySmall, color = Secondary.copy(alpha = 0.4f), modifier = Modifier.weight(1f))
                 }
             }
-        }
 
-        if (editing) {
+            if (editing) {
             Spacer(modifier = Modifier.height(8.dp))
             // Edit mode: show saved key with mask + check + delete, then input fields
             if (hasKey) {
