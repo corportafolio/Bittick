@@ -484,18 +484,19 @@ class SettingsViewModel @Inject constructor(
                 val response = ApiClient.apiService.getBotApiKey(address, inscriptionId, mode)
                 if (response.isSuccessful && response.body()?.exito == true) {
                     val data = response.body()?.data
+                    val hasKey = data != null && data.api_key.isNotBlank()
                     if (mode == "spot") {
                         _state.value = _state.value.copy(
-                            spotApiKeyMasked = if (data?.has_key == true) data.api_key else null,
-                            spotApiKeyHasKey = data?.has_key == true,
+                            spotApiKeyMasked = if (hasKey) maskKey(data!!.api_key) else null,
+                            spotApiKeyHasKey = hasKey,
                             spotApiKeyEditing = false,
                             spotApiKeyInput = "",
                             spotApiSecretInput = ""
                         )
                     } else {
                         _state.value = _state.value.copy(
-                            futuresApiKeyMasked = if (data?.has_key == true) data.api_key else null,
-                            futuresApiKeyHasKey = data?.has_key == true,
+                            futuresApiKeyMasked = if (hasKey) maskKey(data!!.api_key) else null,
+                            futuresApiKeyHasKey = hasKey,
                             futuresApiKeyEditing = false,
                             futuresApiKeyInput = "",
                             futuresApiSecretInput = ""
@@ -503,6 +504,14 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
             } catch (_: Exception) {}
+        }
+    }
+
+    private fun maskKey(key: String): String {
+        return if (key.length > 8) {
+            key.substring(0, 4) + "••••••••" + key.substring(key.length - 4)
+        } else {
+            "••••••••"
         }
     }
 
