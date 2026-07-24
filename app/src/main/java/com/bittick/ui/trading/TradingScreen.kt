@@ -62,6 +62,7 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import kotlinx.coroutines.delay
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -95,8 +96,8 @@ import kotlinx.coroutines.launch
 
 private val INTERVALS = listOf("1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M")
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun TradingScreen(
     onSettingsClick: () -> Unit = {},
     onWalletClick: () -> Unit = {},
@@ -108,6 +109,14 @@ fun TradingScreen(
     val state by viewModel.state.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    // Lazy WebView: only render when chart section is first scrolled into view
+    val chartSectionVisible = remember { mutableStateOf<Boolean>(false) }
+
+    // Show chart after a brief delay (allows initial screen to render fast)
+    LaunchedEffect(Unit) {
+        delay(500)
+        chartSectionVisible.value = true
+    }
 
     LaunchedEffect(refreshTrigger) {
         viewModel.loadAll()
@@ -270,13 +279,27 @@ fun TradingScreen(
                                             .height(if (state.chartExpanded) 600.dp else if (state.isFreeTier) 120.dp else 300.dp)
                                     ) {
                                         if (!state.isFreeTier) {
-                                            CandleChartView(klines = state.klines, zones = state.zones, tradingZones = state.tradingZones, zonesVisible = state.zonesVisible)
-                                            if (state.chartLoading) {
+                                            if (chartSectionVisible.value) {
+                                                CandleChartView(klines = state.klines, zones = state.zones, tradingZones = state.tradingZones, zonesVisible = state.zonesVisible)
+                                                if (state.chartLoading) {
+                                                    Box(
+                                                        modifier = Modifier.matchParentSize(),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        CircularProgressIndicator(color = BittickColor)
+                                                    }
+                                                }
+                                            } else {
+                                                // Placeholder while chart not yet visible - avoids WebView init cost
                                                 Box(
-                                                    modifier = Modifier.matchParentSize(),
+                                                    modifier = Modifier.fillMaxSize(),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    CircularProgressIndicator(color = BittickColor)
+                                                    Text(
+                                                        text = "Gráfico se cargará al hacer scroll...",
+                                                        color = Secondary.copy(alpha = 0.3f),
+                                                        style = MaterialTheme.typography.bodyMedium
+                                                    )
                                                 }
                                             }
                                         } else {

@@ -108,6 +108,11 @@ interface ApiService {
         @Path("mode") mode: String
     ): Response<LevelConfigsResponse>
 
+    @GET("api/trading/strategies/levels/{inscriptionId}")
+    suspend fun getAllBotLevels(
+        @Path("inscriptionId") inscriptionId: String
+    ): Response<AllLevelsResponse>
+
     @POST("api/trading/strategies/levels")
     suspend fun saveLevelConfigs(
         @Body body: LevelConfigsRequest

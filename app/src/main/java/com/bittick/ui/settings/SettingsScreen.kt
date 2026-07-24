@@ -637,7 +637,7 @@ private fun BotCard(
     onUpdateLevel: (Int, String, Any) -> Unit,
     onSave: () -> Unit
 ) {
-    val hasInvalidLevel = levels.any { it.min_score < 6 || it.min_confidence < 6 }
+    val hasInvalidLevel = levels.any { it.minScore < 6 || it.minConfidence < 6 }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -681,7 +681,7 @@ private fun BotCard(
 
                     levels.forEachIndexed { index, levelConfig ->
                         val levelNum = 10 - index
-                        val levelError = levelConfig.min_score < 6 || levelConfig.min_confidence < 6
+                        val levelError = levelConfig.minScore < 6 || levelConfig.minConfidence < 6
                         val id = "%02d".format(index + 1)
 
                         Row(
@@ -690,9 +690,9 @@ private fun BotCard(
                         ) {
                             Text(id, style = MaterialTheme.typography.bodySmall, color = Secondary, modifier = Modifier.weight(0.5f))
 
-                            var scoreText by remember(levelConfig.min_score) { mutableStateOf(levelConfig.min_score.toString()) }
-                            var confText by remember(levelConfig.min_confidence) { mutableStateOf(levelConfig.min_confidence.toString()) }
-                            var amountText by remember(levelConfig.position_size_usdt) { mutableStateOf(levelConfig.position_size_usdt.toInt().toString()) }
+                            var scoreText by remember(levelConfig.minScore) { mutableStateOf(levelConfig.minScore.toString()) }
+                            var confText by remember(levelConfig.minConfidence) { mutableStateOf(levelConfig.minConfidence.toString()) }
+                            var amountText by remember(levelConfig.positionSizeUsdt) { mutableStateOf(levelConfig.positionSizeUsdt.toInt().toString()) }
 
                             OutlinedTextField(
                                 value = scoreText,
@@ -727,7 +727,7 @@ private fun BotCard(
                             )
 
                             Checkbox(
-                                checked = levelConfig.enabled,
+                                checked = levelConfig.isEnabled,
                                 onCheckedChange = { onUpdateLevel(levelNum, "enabled", it) },
                                 modifier = Modifier.weight(0.5f)
                             )

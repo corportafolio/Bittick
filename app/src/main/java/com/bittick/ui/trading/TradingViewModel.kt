@@ -22,6 +22,8 @@ import retrofit2.Response
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -85,6 +87,25 @@ class TradingViewModel @Inject constructor(
     private var tickerPollingJob: Job? = null
     private var lastCreatedAt: String? = null
     private val gson = Gson()
+
+    // Cache TTL 30s
+    private var cachedState: TradingUiState? = null
+    private var cacheTimestamp: Long = 0
+    private val CACHE_TTL_MS = 30_000L
+
+    private fun isCacheValid(): Boolean {
+        return cachedState != null && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS
+    }
+
+    private fun invalidateCache() {
+        cachedState = null
+        cacheTimestamp = 0
+    }
+
+    private fun updateCache(newState: TradingUiState) {
+        cachedState = newState
+        cacheTimestamp = System.currentTimeMillis()
+    }
 
     private inline fun <reified T> Response<T>.parsedBody(): T? {
         if (isSuccessful) return body()
@@ -217,16 +238,32 @@ class TradingViewModel @Inject constructor(
 
     fun loadAll() {
         viewModelScope.launch {
+            // Return cached data immediately if valid (avoids 20-30s wait)
+            if (isCacheValid()) {
+                Log.d("TradingVM", "loadAll() returning CACHED data (age=${System.currentTimeMillis() - cacheTimestamp}ms)")
+                _state.value = cachedState!!.copy(isLoading = false)
+                return@launch
+            }
+
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val addr = getWalletAddress()
-                val spotOppResponse = api.getTradingOpportunities(walletAddress = addr, botType = "spot")
-                val futuresOppResponse = api.getTradingOpportunities(walletAddress = addr, botType = "futures")
-                val posResponse = api.getTradingPositions(walletAddress = addr)
-                val closedPosResponse = api.getTradingPositions(walletAddress = addr, status = "closed")
                 val inscriptionId = prefs.getSelectedInscriptionId()
-                val botStatusResponse = api.getTradingBotStatus(walletAddress = addr, inscriptionId = inscriptionId)
-                val tickerResponse = api.getTicker()
+
+                // Parallelize 6 API calls using async/await
+                val spotOppDeferred = async { api.getTradingOpportunities(walletAddress = addr, botType = "spot") }
+                val futuresOppDeferred = async { api.getTradingOpportunities(walletAddress = addr, botType = "futures") }
+                val posDeferred = async { api.getTradingPositions(walletAddress = addr) }
+                val closedPosDeferred = async { api.getTradingPositions(walletAddress = addr, status = "closed") }
+                val botStatusDeferred = async { api.getTradingBotStatus(walletAddress = addr, inscriptionId = inscriptionId) }
+                val tickerDeferred = async { api.getTicker() }
+
+                val spotOppResponse = spotOppDeferred.await()
+                val futuresOppResponse = futuresOppDeferred.await()
+                val posResponse = posDeferred.await()
+                val closedPosResponse = closedPosDeferred.await()
+                val botStatusResponse = botStatusDeferred.await()
+                val tickerResponse = tickerDeferred.await()
 
                 val isFreeTier = spotOppResponse.code() == 300
 
@@ -266,7 +303,7 @@ class TradingViewModel @Inject constructor(
 
                 val botNum = prefs.getBotNumber() ?: 0
 
-                _state.value = _state.value.copy(
+                val newState = _state.value.copy(
                     spotOpportunities = spotOpps,
                     futuresOpportunities = futuresOpps,
                     spotPositions = spotPos + spotClosed,
@@ -279,6 +316,8 @@ class TradingViewModel @Inject constructor(
                     botNumber = botNum,
                     currentPrice = currentPrice
                 )
+                _state.value = newState
+                updateCache(newState)
                 updateLastCreatedAt(spotOpps + futuresOpps)
 
                 loadTradingZones()
@@ -304,7 +343,7 @@ class TradingViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(chartLoading = true, chartStatus = "cargando velas $interval...")
             try {
-                val response = api.getKlines(interval = interval, limit = 500)
+                val response = api.getKlines(interval = interval, limit = 200)
                 if (response.isSuccessful && response.body()?.exito == true) {
                     val klines = response.body()!!.data
                     _state.value = _state.value.copy(

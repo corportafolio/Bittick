@@ -66,11 +66,46 @@ data class SettingsUiState(
 )
 
 fun defaultLevels() = listOf(
-    com.bittick.network.LevelConfig(10, true, 10.0, 10, 10, 3),
-    com.bittick.network.LevelConfig(9, true, 20.0, 9, 9, 3),
-    com.bittick.network.LevelConfig(8, true, 40.0, 8, 8, 3),
-    com.bittick.network.LevelConfig(7, true, 20.0, 7, 7, 2),
-    com.bittick.network.LevelConfig(6, true, 10.0, 6, 6, 1)
+    com.bittick.network.LevelConfig(
+        level = 10,
+        enabled = 1,
+        positionSizeUsdt = 10.0,
+        minScore = 10,
+        minConfidence = 10,
+        leverage = 3
+    ),
+    com.bittick.network.LevelConfig(
+        level = 9,
+        enabled = 1,
+        positionSizeUsdt = 20.0,
+        minScore = 9,
+        minConfidence = 9,
+        leverage = 3
+    ),
+    com.bittick.network.LevelConfig(
+        level = 8,
+        enabled = 1,
+        positionSizeUsdt = 40.0,
+        minScore = 8,
+        minConfidence = 8,
+        leverage = 3
+    ),
+    com.bittick.network.LevelConfig(
+        level = 7,
+        enabled = 1,
+        positionSizeUsdt = 20.0,
+        minScore = 7,
+        minConfidence = 7,
+        leverage = 2
+    ),
+    com.bittick.network.LevelConfig(
+        level = 6,
+        enabled = 1,
+        positionSizeUsdt = 10.0,
+        minScore = 6,
+        minConfidence = 6,
+        leverage = 1
+    )
 )
 
 @HiltViewModel
@@ -144,7 +179,7 @@ class SettingsViewModel @Inject constructor(
         if (inscriptionId != null) {
             loadInscriptions(address)
             loadPreferences(inscriptionId)
-            loadLevelConfigs(inscriptionId)
+            loadAllLevels(inscriptionId)
         }
     }
 
@@ -310,10 +345,10 @@ class SettingsViewModel @Inject constructor(
         val levels = _state.value.spotLevels.map {
             if (it.level == level) {
                 when (field) {
-                    "enabled" -> it.copy(enabled = value as Boolean)
-                    "amount" -> it.copy(position_size_usdt = value as Double)
-                    "min_score" -> it.copy(min_score = value as Int)
-                    "min_confidence" -> it.copy(min_confidence = value as Int)
+                    "enabled" -> it.copy(enabled = if (value as Boolean) 1 else 0)
+                    "amount" -> it.copy(positionSizeUsdt = value as Double)
+                    "min_score" -> it.copy(minScore = value as Int)
+                    "min_confidence" -> it.copy(minConfidence = value as Int)
                     "leverage" -> it.copy(leverage = value as Int)
                     else -> it
                 }
@@ -327,10 +362,10 @@ class SettingsViewModel @Inject constructor(
         val levels = _state.value.futuresLevels.map {
             if (it.level == level) {
                 when (field) {
-                    "enabled" -> it.copy(enabled = value as Boolean)
-                    "amount" -> it.copy(position_size_usdt = value as Double)
-                    "min_score" -> it.copy(min_score = value as Int)
-                    "min_confidence" -> it.copy(min_confidence = value as Int)
+                    "enabled" -> it.copy(enabled = if (value as Boolean) 1 else 0)
+                    "amount" -> it.copy(positionSizeUsdt = value as Double)
+                    "min_score" -> it.copy(minScore = value as Int)
+                    "min_confidence" -> it.copy(minConfidence = value as Int)
                     "leverage" -> it.copy(leverage = value as Int)
                     else -> it
                 }
@@ -355,7 +390,7 @@ class SettingsViewModel @Inject constructor(
             return
         }
         val levels = if (mode == "spot") _state.value.spotLevels else _state.value.futuresLevels
-        android.util.Log.d("SettingsVM", "saveLevelConfigs($mode): sending ${levels.size} levels: ${levels.map { "L${it.level}=s${it.min_score}/c${it.min_confidence}/\$${it.position_size_usdt}/on=${it.enabled}" }}")
+        android.util.Log.d("SettingsVM", "saveLevelConfigs($mode): sending ${levels.size} levels: ${levels.map { "L${it.level}=s${it.minScore}/c${it.minConfidence}/\$${it.positionSizeUsdt}/on=${it.enabled}" }}")
         _state.value = _state.value.copy(levelConfigsSaving = true, levelConfigsMessage = null)
         viewModelScope.launch {
             try {
@@ -373,6 +408,8 @@ class SettingsViewModel @Inject constructor(
                         levelConfigsSaving = false,
                         levelConfigsMessage = "Niveles $label guardados"
                     )
+                    // Refresh ALL levels from server immediately after successful save
+                    loadAllLevels(inscriptionId)
                 } else {
                     val errorMsg = "Error guardando niveles $mode (HTTP ${response.code()})"
                     android.util.Log.e("SettingsVM", "saveLevelConfigs($mode): $errorMsg")
@@ -406,6 +443,38 @@ class SettingsViewModel @Inject constructor(
         }
         loadApiKey(inscriptionId, "spot")
         loadApiKey(inscriptionId, "futures")
+    }
+
+    private fun loadAllLevels(inscriptionId: String) {
+        viewModelScope.launch {
+            android.util.Log.d("LevelsVM", "=== LOAD ALL LEVELS START for $inscriptionId ===")
+            try {
+                val response = ApiClient.apiService.getAllBotLevels(inscriptionId)
+                if (response.isSuccessful && response.body()?.exito == true) {
+                    val data = response.body()?.data
+                    if (data != null) {
+                        _state.value = _state.value.copy(
+                            spotLevels = data.spot,
+                            futuresLevels = data.futures
+                        )
+                        // LOG: Tabla completa 10 niveles
+                        data.spot.forEach { l ->
+                            android.util.Log.d("LevelsVM", "SPOT L${l.level}: score=${l.minScore} conf=${l.minConfidence} amt=\$${l.positionSizeUsdt} enabled=${l.isEnabled} updated=${l.updatedAt}")
+                        }
+                        data.futures.forEach { l ->
+                            android.util.Log.d("LevelsVM", "FUT L${l.level}: score=${l.minScore} conf=${l.minConfidence} amt=\$${l.positionSizeUsdt} enabled=${l.isEnabled} updated=${l.updatedAt}")
+                        }
+                        android.util.Log.d("LevelsVM", "=== LOAD ALL LEVELS END ===")
+                    }
+                } else {
+                    android.util.Log.e("LevelsVM", "loadAllLevels failed: HTTP ${response.code()}, exito=${response.body()?.exito}")
+                    _state.value = _state.value.copy(error = "Error cargando niveles: HTTP ${response.code()}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LevelsVM", "loadAllLevels EXCEPTION: ${e.message}", e)
+                _state.value = _state.value.copy(error = "Error cargando niveles: ${e.message}")
+            }
+        }
     }
 
     private fun loadApiKey(inscriptionId: String, mode: String) {

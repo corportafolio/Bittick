@@ -1,5 +1,7 @@
 package com.bittick.network
 
+import com.google.gson.annotations.SerializedName
+
 data class ApiResponse<T>(val exito: Boolean, val data: T?, val message: String?, val error: String?)
 
 data class TradingOpportunitiesResponse(val exito: Boolean, val data: List<TradingOpportunity>)
@@ -219,12 +221,29 @@ data class SavePreferencesResponse(val exito: Boolean, val message: String?)
 
 // Level configs per bot
 data class LevelConfig(
-    val level: Int,
-    val enabled: Boolean = true,
-    val position_size_usdt: Double = 10.0,
-    val min_score: Int = 6,
-    val min_confidence: Int = 6,
-    val leverage: Int = 1
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("inscription_id") val inscriptionId: String? = null,
+    @SerializedName("mode") val mode: String? = null,
+    @SerializedName("level") val level: Int,
+    @SerializedName("strategy_name") val strategyName: String? = null,
+    @SerializedName("enabled") val enabled: Int = 1,
+    @SerializedName("position_size_usdt") val positionSizeUsdt: Double = 10.0,
+    @SerializedName("min_score") val minScore: Int = 6,
+    @SerializedName("min_confidence") val minConfidence: Int = 6,
+    @SerializedName("leverage") val leverage: Int = 1,
+    @SerializedName("updated_at") val updatedAt: String? = null
+) {
+    val isEnabled: Boolean get() = enabled == 1
+}
+
+data class AllLevelsResponse(
+    val exito: Boolean,
+    val data: AllLevelsData?
+)
+
+data class AllLevelsData(
+    val spot: List<LevelConfig>,
+    val futures: List<LevelConfig>
 )
 
 data class LevelConfigsResponse(val exito: Boolean, val data: List<LevelConfig>?)
